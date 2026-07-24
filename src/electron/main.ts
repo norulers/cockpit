@@ -8,6 +8,7 @@ import { setupGo2RTCService } from './services/go2rtc'
 import { setupHardwareTelemetryService } from './services/hardware-telemetry'
 import { setupJoystickMonitoring } from './services/joystick'
 import { linkService } from './services/link'
+import { setupMenuService } from './services/menu'
 import { setupNetworkService } from './services/network'
 import { setupOsmRefererService } from './services/osm-referer'
 import { setupResourceMonitoringService } from './services/resource-monitoring'
@@ -128,6 +129,7 @@ setupWorkspaceService()
 setupJoystickMonitoring()
 setupVideoRecordingService()
 setupGo2RTCService()
+setupMenuService()
 
 app.whenReady().then(async () => {
   console.log('Electron app is ready.')
@@ -144,7 +146,8 @@ app.whenReady().then(async () => {
   displaySleepPowerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep')
 
   setTimeout(() => {
-    setupAutoUpdater(mainWindow as BrowserWindow)
+    // Auto-updater disabled for custom builds
+    // setupAutoUpdater(mainWindow as BrowserWindow)
   }, 5000)
 })
 

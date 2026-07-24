@@ -234,11 +234,11 @@
                   class="flex justify-start items-center"
                   :class="interfaceStore.isOnSmallScreen ? 'scale-80 w-[80%]' : 'scale-100 w-[76%]'"
                 >
-                  <v-text-field
+                  <v-combobox
                     v-model="mavlink2RestWebsocketURI"
                     :disabled="!mainVehicleStore.customMAVLink2RestWebsocketURI.enabled"
+                    :items="mavlink2RestUriExamples"
                     variant="filled"
-                    type="input"
                     density="compact"
                     :hint="$t('URI of a Mavlink2Rest')"
                     :rules="[isValidSocketConnectionURI]"
@@ -253,7 +253,7 @@
                         mdi-restore
                       </v-icon>
                     </template>
-                  </v-text-field>
+                  </v-combobox>
                 </div>
                 <v-btn
                   :size="interfaceStore.isOnSmallScreen ? 'small' : 'default'"
@@ -743,6 +743,11 @@ watch(
 const mainConnectionForm = ref()
 const mainConnectionFormValid = ref(false)
 const mavlink2RestWebsocketURI = ref(mainVehicleStore.MAVLink2RestWebsocketURI)
+const mavlink2RestUriExamples = [
+  'udpout:192.168.2.2:14550',
+  'udpin:0.0.0.0:14550',
+  'tcpsout:127.0.0.1:5760',
+]
 
 const addNewVehicleConnection = async (conn: Connection.URI): Promise<void> => {
   mavlink2RestWebsocketURI.value = conn

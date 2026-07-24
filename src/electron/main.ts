@@ -45,6 +45,7 @@ function createWindow(): void {
       webSecurity: !process.env.VITE_DEV_SERVER_URL, // Disable CORS in dev mode so we don't have to deal with per-system workarounds
     },
     autoHideMenuBar: true,
+    fullscreen: true,
     width: store.get('windowBounds')?.width ?? screen.getPrimaryDisplay().workAreaSize.width,
     height: store.get('windowBounds')?.height ?? screen.getPrimaryDisplay().workAreaSize.height,
     x: store.get('windowBounds')?.x ?? screen.getPrimaryDisplay().bounds.x,
@@ -141,6 +142,18 @@ app.whenReady().then(async () => {
 
   console.log('Creating window...')
   createWindow()
+
+  ipcMain.handle('toggle-fullscreen', () => {
+    if (mainWindow) {
+      mainWindow.setFullScreen(!mainWindow.isFullScreen())
+      return mainWindow.isFullScreen()
+    }
+    return false
+  })
+
+  ipcMain.handle('is-fullscreen', () => {
+    return mainWindow?.isFullScreen() ?? false
+  })
 
   appSuspensionPowerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension')
   displaySleepPowerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep')

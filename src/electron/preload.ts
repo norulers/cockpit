@@ -102,4 +102,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
   getHardwareTelemetryInfo: () => ipcRenderer.invoke('get-hardware-telemetry-info'),
   updateMenuLanguage: (locale: string) => ipcRenderer.invoke('update-menu-language', locale),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  isFullscreen: () => ipcRenderer.invoke('is-fullscreen'),
 })

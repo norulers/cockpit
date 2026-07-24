@@ -11,16 +11,34 @@
 </template>
 
 <script setup lang="ts">
-import { useFullscreen } from '@vueuse/core'
-import { computed } from 'vue'
+import { isElectron } from '@/libs/utils'
+import { computed, onMounted, ref } from 'vue'
 
-const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
+const electronFullscreen = ref(false)
 
-const fullScreenToggleIcon = computed(() => (isFullscreen.value ? 'fa-solid fa-compress' : 'fa-solid fa-expand'))
-const isFullScreen = computed(() => isFullscreen.value)
+const isFullScreen = computed(() => electronFullscreen.value)
 
-const toggleFullScreen = (): void => {
-  logUserAction(`${isFullscreen.value ? 'Exited' : 'Entered'} fullscreen via mini-widget`)
-  toggleFullscreen()
+const fullScreenToggleIcon = computed(() => (isFullScreen.value ? 'fa-solid fa-compress' : 'fa-solid fa-expand'))
+
+const toggleFullScreen = async (): Promise<void> => {
+  logUserAction(`${isFullScreen.value ? 'Exited' : 'Entered'} fullscreen via mini-widget`)
+  if (isElectron() && window.electronAPI?.toggleFullscreen) {
+    electronFullscreen.value = await window.electronAPI.toggleFullscreen()
+  } else {
+    // Fallback for browser: use Fullscreen API
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      electronFullscreen.value = false
+    } else {
+      await document.documentElement.requestFullscreen()
+      electronFullscreen.value = true
+    }
+  }
 }
+
+onMounted(async () => {
+  if (isElectron() && window.electronAPI?.isFullscreen) {
+    electronFullscreen.value = await window.electronAPI.isFullscreen()
+  }
+})
 </script>

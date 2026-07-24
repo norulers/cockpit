@@ -306,7 +306,7 @@ const missionStore = useMissionStore()
 const interfaceStore = useAppInterfaceStore()
 const vehicleStore = useMainVehicleStore()
 
-const mapTileProviderOptions: MapTileProviderPreference[] = ['Use last selected', 'OpenStreetMap', 'Esri World Imagery']
+const mapTileProviderOptions: MapTileProviderPreference[] = ['OpenStreetMap', 'Esri World Imagery']
 
 const translateEventCategory = (category: string): string => {
   const mapping: Record<string, string> = {

@@ -238,8 +238,11 @@
                     v-model="mavlink2RestWebsocketURI"
                     :disabled="!mainVehicleStore.customMAVLink2RestWebsocketURI.enabled"
                     :items="mavlink2RestUriExamples"
-                    variant="filled"
+                    variant="outlined"
                     density="compact"
+                    theme="dark"
+                    class="glass-select"
+                    :menu-props="{ contentClass: 'glass-menu' }"
                     :hint="$t('URI of a Mavlink2Rest')"
                     :rules="[isValidSocketConnectionURI]"
                   >

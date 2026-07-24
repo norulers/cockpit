@@ -1186,7 +1186,9 @@ watch(vehicleStore.coordinates, () => {
   if (vehicleMarker.value === undefined) {
     let vehicleIconUrl = genericVehicleMarkerImage
 
-    if (vehicleStore.vehicleType === MavType.MAV_TYPE_SURFACE_BOAT) {
+    if (missionStore.customVehicleIcon) {
+      vehicleIconUrl = missionStore.customVehicleIcon
+    } else if (vehicleStore.vehicleType === MavType.MAV_TYPE_SURFACE_BOAT) {
       vehicleIconUrl = blueboatMarkerImage
     } else if (vehicleStore.vehicleType === MavType.MAV_TYPE_SUBMARINE) {
       vehicleIconUrl = brov2MarkerImage

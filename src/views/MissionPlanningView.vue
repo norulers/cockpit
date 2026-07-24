@@ -179,6 +179,27 @@
         </div>
         <div
           v-if="!isCreatingSurvey && !isCreatingSimplePath"
+          class="mx-4 mt-2"
+        >
+          <input
+            ref="iconFileInput"
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="onCustomIconSelected"
+          />
+          <v-btn
+            size="x-small"
+            variant="outlined"
+            :class="missionStore.customVehicleIcon ? 'text-green-400' : ''"
+            @click="openIconPicker"
+          >
+            <v-icon start size="16">mdi-image-edit</v-icon>
+            {{ missionStore.customVehicleIcon ? $t('Icon set') : $t('Custom icon') }}
+          </v-btn>
+        </div>
+        <div
+          v-if="!isCreatingSurvey && !isCreatingSimplePath"
           class="flex flex-row justify-center items-center gap-x-2 mx-4 my-1"
         >
           <p class="text-sm">{{ $t('Cruise speed') }}</p>
@@ -978,6 +999,22 @@ const plannedVehicleTypeItems = PLANNABLE_VEHICLE_TYPES.map((item) => ({ ...item
 
 const onPlannedVehicleTypeChange = (value?: MavType): void => {
   logUserAction(`Selected "${vehicleTypeLabel(value)}" as the planning vehicle type`)
+}
+
+const iconFileInput = ref<HTMLInputElement>()
+const openIconPicker = (): void => {
+  logUserAction('Opened custom vehicle icon picker')
+  iconFileInput.value?.click()
+}
+const onCustomIconSelected = (event: Event): void => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    missionStore.customVehicleIcon = reader.result as string
+    logUserAction('Set custom vehicle icon')
+  }
+  reader.readAsDataURL(file)
 }
 const waypointMarkers = shallowRef<{ [id: string]: Marker }>({})
 const isCreatingSimplePath = ref(false)

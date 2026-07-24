@@ -80,7 +80,7 @@ export const useMissionStore = defineStore('mission', () => {
   )
   const defaultMapTileProvider = useBlueOsStorage<MapTileProviderPreference>(
     'cockpit-default-map-tile-provider',
-    'Use last selected'
+    'Esri World Imagery'
   )
   const userLastMapShowSeamarks = useBlueOsStorage<boolean>('cockpit-user-last-map-show-seamarks', true)
   const userLastMapShowMarineProfile = useBlueOsStorage<boolean>('cockpit-user-last-map-show-marine-profile', false)
@@ -114,6 +114,7 @@ export const useMissionStore = defineStore('mission', () => {
 
   // Fallback vehicle type used by vehicle-specific planning features when no vehicle is connected.
   const plannedVehicleType = useBlueOsStorage<MavType | undefined>('cockpit-planned-vehicle-type', undefined)
+  const customVehicleIcon = useBlueOsStorage<string | undefined>('cockpit-custom-vehicle-icon', undefined)
   const savedMissions = useBlueOsStorage<SavedMission[]>('cockpit-mission-library', [])
   // Thumbnail bytes live local-first in IndexedDB and sync to the vehicle as real files, so adding many
   // entries never bloats the settings payload the way inlined base64 SVGs would.
@@ -888,6 +889,7 @@ export const useMissionStore = defineStore('mission', () => {
     clearUndoStack,
     homeMarkerPosition,
     plannedVehicleType,
+    customVehicleIcon,
     effectiveVehicleType,
     savedMissions,
     thumbnailUrlFor,

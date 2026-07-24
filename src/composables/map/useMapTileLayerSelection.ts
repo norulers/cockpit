@@ -43,11 +43,7 @@ export const useMapTileLayerSelection = (tileLayers: MapTileLayers): MapTileLaye
   const { baseMaps, overlays, esri } = tileLayers
 
   const preferredBaseLayer = (): L.TileLayer => {
-    const preferredProvider =
-      missionStore.defaultMapTileProvider === 'Use last selected'
-        ? missionStore.userLastMapTileProvider
-        : missionStore.defaultMapTileProvider
-    return baseMaps[preferredProvider] || esri
+    return baseMaps[missionStore.defaultMapTileProvider] || esri
   }
 
   const getInitialLayers = (): Layer[] => {

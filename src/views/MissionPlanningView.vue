@@ -3960,7 +3960,7 @@ let fallbackLayers: L.TileLayer[] = []
 
 onMounted(async () => {
   // Build the shared base maps, overlays and extra OSM overlay (tile-provider definitions live in useMapTileLayers)
-  const tileLayers = useMapTileLayers({ extraOsm: true, seamarks: true, marineProfile: true })
+  const tileLayers = useMapTileLayers({ extraOsm: missionStore.showExtraOsmOnMissionPlanning, seamarks: true, marineProfile: true })
   const { osm, esri, extraOsm } = tileLayers
 
   // Restore and persist the user's base-map and overlay selection
@@ -3975,7 +3975,7 @@ onMounted(async () => {
   mapContext.map.value = planningMap.value
   mapContext.mapReady.value = true
 
-  extraOsm?.addTo(planningMap.value)
+  if (missionStore.showExtraOsmOnMissionPlanning) extraOsm?.addTo(planningMap.value)
   planningMap.value.zoomControl.setPosition('bottomright')
   // Translate Leaflet default zoom button titles
   const zoomInBtn = planningMap.value.zoomControl.getContainer()?.querySelector('.leaflet-control-zoom-in') as HTMLElement

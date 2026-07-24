@@ -53,6 +53,15 @@
             @update:model-value="setShowGridOnMissionPlanning"
           />
           <v-switch
+            :model-value="missionStore.showExtraOsmOnMissionPlanning"
+            :label="$t('Show extra OpenStreetMap layer in mission planning')"
+            color="white"
+            hide-details
+            base-color="#FFFFFF33"
+            class="mt-2 -mb-2 ml-3"
+            @update:model-value="setShowExtraOsmOnMissionPlanning"
+          />
+          <v-switch
             :model-value="missionStore.showMissionEstimates"
             :label="$t('Show mission estimates panel')"
             color="white"
@@ -375,6 +384,10 @@ const setShowMissionCreationTips = (value: boolean | null): void => {
   missionStore.showMissionCreationTips = enabled
 }
 
+const setShowExtraOsmOnMissionPlanning = (value: boolean | null): void => {
+  logUserAction(`${value ? 'Enabled' : 'Disabled'} extra OSM layer in mission planning`)
+  missionStore.showExtraOsmOnMissionPlanning = Boolean(value)
+}
 const setShowGridOnMissionPlanning = (value: boolean | null): void => {
   const enabled = value ?? false
   logUserAction(`${enabled ? 'Enabled' : 'Disabled'} coordinate grid on maps`)

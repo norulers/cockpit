@@ -70,6 +70,7 @@ export const useMissionStore = defineStore('mission', () => {
   const showMissionCreationTips = useBlueOsStorage('cockpit-show-mission-creation-tips', true)
   const showChecklistBeforeArm = useBlueOsStorage('cockpit-show-checklist-before-arm', true)
   const showGridOnMissionPlanning = useBlueOsStorage('cockpit-show-grid-on-mission-planning', false)
+  const showExtraOsmOnMissionPlanning = useBlueOsStorage('cockpit-show-extra-osm-on-mission-planning', false)
   const showMissionEstimates = useBlueOsStorage('cockpit-show-mission-estimates', true)
   const defaultCruiseSpeed = useBlueOsStorage<number>('cockpit-default-cruise-speed', 1)
   const cruiseSpeed = ref<number>(Number(defaultCruiseSpeed.value))
@@ -843,6 +844,7 @@ export const useMissionStore = defineStore('mission', () => {
     showMissionCreationTips,
     showChecklistBeforeArm,
     showGridOnMissionPlanning,
+    showExtraOsmOnMissionPlanning,
     showMissionEstimates,
     addCommandToWaypoint,
     removeCommandFromWaypoint,

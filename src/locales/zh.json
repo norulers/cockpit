@@ -1273,6 +1273,7 @@
   "Show coordinate grid on maps": "在地图上显示坐标网格",
   "Show details": "显示详情",
   "Show distance tags": "显示距离标签",
+  "Show extra OpenStreetMap layer in mission planning": "在任务规划中显示额外的OpenStreetMap图层",
   "Show height value": "显示高度值",
   "Show home on HUD": "在 HUD 上显示返航点",
   "Show ignored actions": "显示已忽略的操作",

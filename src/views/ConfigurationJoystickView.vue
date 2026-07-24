@@ -163,7 +163,7 @@
               </div>
               <div v-if="currentTabVIew === 'svg'" class="flex flex-col justify-between">
                 <div v-if="!controllerStore.joysticks.size" class="text-center py-12 opacity-70 text-sm">
-                  Connect a joystick to see its visual layout and live input.
+                  {{ $t('Connect a joystick to see its visual layout and live input.') }}
                 </div>
                 <div
                   v-for="[key, joystick] in controllerStore.joysticks"

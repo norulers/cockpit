@@ -46,8 +46,8 @@ const baseConfig = {
     vuetify({
       autoImport: true,
     }),
-    // Only include PWA plugin when NOT building the library
-    !isLibrary &&
+    // PWA is only for web/lite builds — Electron uses file:// protocol where SW caching is harmful
+    !isLibrary && !isElectron && !isBuilding &&
       VitePWA({
         registerType: 'autoUpdate',
         devOptions: {

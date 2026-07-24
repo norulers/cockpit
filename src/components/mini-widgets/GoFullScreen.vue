@@ -11,34 +11,31 @@
 </template>
 
 <script setup lang="ts">
-import { isElectron } from '@/libs/utils'
+import { useFullscreen } from '@vueuse/core'
 import { computed, onMounted, ref } from 'vue'
 
-const electronFullscreen = ref(false)
+// In Electron the native fullscreen does not fire the browser Fullscreen API,
+// so we manage state via IPC instead of relying on useFullscreen's internal listener.
+const isElectron = !!window.electronAPI
 
-const isFullScreen = computed(() => electronFullscreen.value)
+const browserApi = isElectron ? null : useFullscreen()
+const isFullscreen = browserApi ? browserApi.isFullscreen : ref(false)
 
-const fullScreenToggleIcon = computed(() => (isFullScreen.value ? 'fa-solid fa-compress' : 'fa-solid fa-expand'))
-
-const toggleFullScreen = async (): Promise<void> => {
-  logUserAction(`${isFullScreen.value ? 'Exited' : 'Entered'} fullscreen via mini-widget`)
-  if (isElectron() && window.electronAPI?.toggleFullscreen) {
-    electronFullscreen.value = await window.electronAPI.toggleFullscreen()
-  } else {
-    // Fallback for browser: use Fullscreen API
-    if (document.fullscreenElement) {
-      await document.exitFullscreen()
-      electronFullscreen.value = false
-    } else {
-      await document.documentElement.requestFullscreen()
-      electronFullscreen.value = true
-    }
-  }
-}
-
-onMounted(async () => {
-  if (isElectron() && window.electronAPI?.isFullscreen) {
-    electronFullscreen.value = await window.electronAPI.isFullscreen()
-  }
+onMounted(() => {
+  if (!window.electronAPI) return
+  window.electronAPI.onFullscreenChanged?.((fs: boolean) => { isFullscreen.value = fs })
+  window.electronAPI.isFullscreen?.().then((fs: boolean) => { isFullscreen.value = fs })
 })
+
+const fullScreenToggleIcon = computed(() => (isFullscreen.value ? 'fa-solid fa-compress' : 'fa-solid fa-expand'))
+const isFullScreen = computed(() => isFullscreen.value)
+
+const toggleFullScreen = (): void => {
+  if (window.electronAPI?.toggleFullscreen) {
+    window.electronAPI.toggleFullscreen()
+  } else {
+    browserApi?.toggle()
+  }
+  logUserAction(`${isFullscreen.value ? 'Exited' : 'Entered'} fullscreen via mini-widget`)
+}
 </script>

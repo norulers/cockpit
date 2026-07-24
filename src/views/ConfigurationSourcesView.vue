@@ -1,21 +1,18 @@
 <template>
   <BaseConfigurationView>
-    <template #title>Sources</template>
+    <template #title>{{ $t('Sources') }}</template>
     <template #content>
       <div
         class="flex-col h-full overflow-y-auto ml-[10px] pr-3 -mr-[10px]"
         :class="interfaceStore.isOnSmallScreen ? 'max-w-[80vw] max-h-[90vh]' : 'max-w-[650px] max-h-[85vh]'"
       >
         <ExpansiblePanel no-top-divider no-bottom-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
-          <template #title>Positioning</template>
+          <template #title>{{ $t('Positioning') }}</template>
           <template #info>
             <div class="w-full">
-              <p>
-                Read one or more external USB/serial GNSS receivers and inject their position and fix data into the
-                data-lake, where it can drive live points of interest and widgets.
-              </p>
+              <p>{{ $t('Read one or more external USB/serial GNSS receivers and inject their position and fix data into the data-lake, where it can drive live points of interest and widgets.') }}</p>
               <p class="mt-2">
-                Message formats are detected automatically (standard NMEA 0183). Each device publishes variables under
+                {{ $t('Message formats are detected automatically (standard NMEA 0183). Each device publishes variables under') }}
                 <span class="font-mono">external/positioning/gnss/&lt;id&gt;/*</span>.
               </p>
             </div>
@@ -26,10 +23,9 @@
                 <div class="flex items-start gap-3">
                   <v-icon color="amber" class="mt-1">mdi-information</v-icon>
                   <div>
-                    <h4 class="text-amber-200 font-medium mb-2">Cockpit Lite</h4>
+                    <h4 class="text-amber-200 font-medium mb-2">{{ $t('Cockpit Lite') }}</h4>
                     <p class="text-amber-100 text-sm">
-                      Reading external serial GNSS receivers is only available in Cockpit Standalone. Browsers cannot
-                      access serial devices outside of a secure context, so this feature is disabled here.
+                      {{ $t('Reading external serial GNSS receivers is only available in Cockpit Standalone. Browsers cannot access serial devices outside of a secure context, so this feature is disabled here.') }}
                     </p>
                   </div>
                 </div>
@@ -41,9 +37,9 @@
 
               <div v-else class="flex flex-col">
                 <div class="flex items-center gap-2 px-3 py-1 text-xs uppercase opacity-60">
-                  <span class="flex-1">Name</span>
-                  <span class="w-[30%] text-center">Port</span>
-                  <span class="w-[24%] text-center">Status</span>
+                  <span class="flex-1">{{ $t('Name') }}</span>
+                  <span class="w-[30%] text-center">{{ $t('Port') }}</span>
+                  <span class="w-[24%] text-center">{{ $t('Status') }}</span>
                   <span class="w-[24px]" />
                 </div>
                 <div

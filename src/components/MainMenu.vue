@@ -224,7 +224,18 @@ const router = useRouter()
 const interfaceStore = useAppInterfaceStore()
 const widgetStore = useWidgetManagerStore()
 const { width: windowWidth, height: windowHeight } = useWindowSize()
-const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
+
+const isElectron = !!window.electronAPI
+const browserApi = isElectron ? null : useFullscreen()
+const isFullscreen = browserApi ? browserApi.isFullscreen : ref(false)
+
+const toggleFullscreen = (): void => {
+  if (window.electronAPI?.toggleFullscreen) {
+    window.electronAPI.toggleFullscreen()
+  } else {
+    browserApi?.toggle()
+  }
+}
 
 /**
  * Main menu component
@@ -657,6 +668,10 @@ onBeforeUnmount(() => {
 })
 
 onMounted(() => {
+  if (window.electronAPI) {
+    window.electronAPI.onFullscreenChanged?.((fs: boolean) => { isFullscreen.value = fs })
+    window.electronAPI.isFullscreen?.().then((fs: boolean) => { isFullscreen.value = fs })
+  }
   if (scrollContainerRef.value) {
     scrollContainerRef.value.addEventListener('scroll', handleScroll)
     handleScroll()

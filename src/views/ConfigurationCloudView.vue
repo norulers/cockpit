@@ -14,8 +14,7 @@
           </template>
           <template #info>
             <p class="w-full">
-              Connect Cockpit to your BlueOS Cloud account to create missions and upload recorded videos directly from
-              the app. After enabling the integration you will be guided through a quick login wizard.
+              {{ $t('Connect Cockpit to your BlueOS Cloud account to create missions and upload recorded videos directly from the app. After enabling the integration you will be guided through a quick login wizard.') }}
             </p>
           </template>
           <template #content>

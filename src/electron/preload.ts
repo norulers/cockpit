@@ -104,4 +104,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateMenuLanguage: (locale: string) => ipcRenderer.invoke('update-menu-language', locale),
   toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
   isFullscreen: () => ipcRenderer.invoke('is-fullscreen'),
+  onFullscreenChanged: (callback: (isFullscreen: boolean) => void) => {
+    ipcRenderer.on('fullscreen-changed', (_event, isFullscreen) => callback(isFullscreen))
+  },
 })

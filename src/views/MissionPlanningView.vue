@@ -962,7 +962,7 @@ const downloadMissionFromVehicle = async (): Promise<void> => {
     })
     updateWaypointMarkers()
 
-    openSnackbar({ variant: 'success', message: 'Mission download succeeded!', duration: 3000 })
+    openSnackbar({ variant: 'success', message: t('Mission download succeeded!'), duration: 3000 })
   } catch (error) {
     showDialog({ variant: 'error', title: t('Mission download failed'), message: error as string, timer: 5000 })
   } finally {
@@ -1387,7 +1387,7 @@ const handleDoNotShowTipsAgain = (): void => {
   missionStore.showMissionCreationTips = false
   openSnackbar({
     variant: 'info',
-    message: 'Mission checklist will not be shown again. You can enable them back in the settings.',
+    message: t('Mission checklist will not be shown again. You can enable them back in the settings.'),
     duration: 5000,
   })
 }
@@ -1450,26 +1450,26 @@ const clearCurrentMission = (): void => {
 const openCLearMissionDialog = (): void => {
   logUserAction('Opened clear-mission dialog')
   showDialog({
-    message: 'Clear current mission?',
+    message: t('Clear current mission?'),
     maxWidth: '400px',
     variant: 'warning',
     persistent: false,
     actions: [
       {
-        text: 'Cancel',
+        text: t('Cancel'),
         action: () => {
           closeDialog()
         },
       },
       {
-        text: 'Clear',
+        text: t('Clear'),
         action: () => {
           logUserAction('Cleared current mission')
           clearCurrentMission()
           closeDialog()
           openSnackbar({
             variant: 'success',
-            message: 'Current mission cleared',
+            message: t('Current mission cleared'),
           })
         },
       },
@@ -2136,7 +2136,7 @@ const hideContextMenu = (): void => {
 const clearVehiclePathHistory = (): void => {
   logUserAction('Cleared vehicle path history')
   missionStore.clearVehicleHistory()
-  openSnackbar({ message: 'Vehicle path history cleared', variant: 'success' })
+  openSnackbar({ message: t('Vehicle path history cleared'), variant: 'success' })
 }
 
 const setHomePositionFromContextMenu = async (): Promise<void> => {
@@ -3036,7 +3036,7 @@ const createSurveyPath = (): void => {
     if (result.path.length === 0) {
       showDialog({
         variant: 'error',
-        message: 'No valid path could be generated. Try adjusting the angle or distance between lines.',
+        message: t('No valid path could be generated. Try adjusting the angle or distance between lines.'),
         timer: 5000,
       })
       return
@@ -3238,7 +3238,7 @@ const refreshSurveyEntryExitMarkers = (): void => {
 
 const generateWaypointsFromSurvey = (): void => {
   if (!surveyPathLayer.value) {
-    showDialog({ variant: 'error', message: 'No survey path to generate waypoints from.', timer: 2000 })
+    showDialog({ variant: 'error', message: t('No survey path to generate waypoints from.'), timer: 2000 })
     return
   }
 
@@ -3265,7 +3265,7 @@ const generateWaypointsFromSurvey = (): void => {
   if (!continuousPath.length) {
     showDialog({
       variant: 'error',
-      message: 'No valid path could be generated. Try adjusting the angle or distance between lines.',
+      message: t('No valid path could be generated. Try adjusting the angle or distance between lines.'),
       timer: 3000,
     })
     return
@@ -3442,7 +3442,7 @@ const regenerateSurveyWaypoints = (angle?: number): void => {
 
     if (!continuousPath.length) {
       openSnackbar({
-        message: 'No valid path could be generated. Try adjusting the angle or distance between lines.',
+        message: t('No valid path could be generated. Try adjusting the angle or distance between lines.'),
         variant: 'error',
         duration: 2000,
       })
@@ -3871,13 +3871,13 @@ const handleLoadMissionFromLibrary = (mission: SavedMission): void => {
   showDialog({
     variant: 'info',
     title: t('Load mission'),
-    message: `Where should "${mission.name}" be placed?`,
+    message: `${t('Where should "{name}" be placed?', { name: mission.name })}`,
     persistent: false,
     maxWidth: 620,
     actions: [
-      { text: 'Cancel', color: 'white', action: closeDialog },
+      { text: t('Cancel'), color: 'white', action: closeDialog },
       {
-        text: 'Keep original location',
+        text: t('Keep original location'),
         color: 'white',
         action: () => {
           closeDialog()

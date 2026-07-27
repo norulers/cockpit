@@ -798,7 +798,7 @@ const {
   savePercentage,
   downloadOfflineMapTiles,
   attachOfflineProgress,
-} = useOfflineTiles({ showDialog, closeDialog, openSnackbar })
+} = useOfflineTiles({ showDialog, closeDialog, openSnackbar, t })
 
 const clearMissionOnVehicle = (): void => {
   logUserAction('Cleared mission on vehicle')

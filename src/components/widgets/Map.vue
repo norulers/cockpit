@@ -287,7 +287,7 @@ const {
   savePercentage,
   downloadOfflineMapTiles,
   attachOfflineProgress,
-} = useOfflineTiles({ showDialog, closeDialog, openSnackbar })
+} = useOfflineTiles({ showDialog, closeDialog, openSnackbar, t })
 // Instantiate the necessary stores
 const vehicleStore = useMainVehicleStore()
 const missionStore = useMissionStore()

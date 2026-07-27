@@ -44,7 +44,7 @@
           <v-btn icon="mdi-refresh" variant="text" size="small" :disabled="!gnss.isSupported" @click="onRefreshPorts" />
         </div>
         <div v-if="device.port && !device.usbMatch?.vendorId" class="-mt-2 text-xs text-amber-300/80">
-          This device reports no USB model id, so auto-connect won't follow it to other computers.
+          {{ $t("This device reports no USB model id, so auto-connect won't follow it to other computers.") }}
         </div>
 
         <div class="flex items-center gap-x-2">
@@ -66,7 +66,7 @@
             :disabled="!gnss.isSupported || !device.port"
             @click="onAutodetect"
           >
-            Auto-detect
+            {{ $t('Auto-detect') }}
           </v-btn>
         </div>
 
@@ -82,7 +82,7 @@
             class="bg-[#FFFFFF22]"
             @click="gnss.disconnectDevice(activeId)"
           >
-            Disconnect
+            {{ $t('Disconnect') }}
           </v-btn>
           <v-btn
             v-else
@@ -92,12 +92,12 @@
             :disabled="!gnss.isSupported || !device.port"
             @click="gnss.connectDevice(activeId)"
           >
-            Connect
+            {{ $t('Connect') }}
           </v-btn>
         </div>
 
         <ExpansiblePanel compact no-top-divider no-bottom-divider :is-expanded="false">
-          <template #title>Device Status</template>
+          <template #title>{{ $t('Device Status') }}</template>
           <template #content>
             <div v-if="fix" class="grid grid-cols-2 gap-2 w-full text-sm mt-2">
               <div
@@ -105,11 +105,11 @@
                 :key="item.label"
                 class="flex justify-between px-3 py-1 rounded bg-[#FFFFFF11]"
               >
-                <span class="opacity-70">{{ item.label }}</span>
+                <span class="opacity-70">{{ $t(item.label) }}</span>
                 <span class="font-mono">{{ item.value }}</span>
               </div>
             </div>
-            <div v-else class="text-sm opacity-60 mt-2">No data received yet.</div>
+            <div v-else class="text-sm opacity-60 mt-2">{{ $t('No data received yet.') }}</div>
           </template>
         </ExpansiblePanel>
 
@@ -121,7 +121,7 @@
             :prepend-icon="consoleOpen ? 'mdi-chevron-up' : 'mdi-console-line'"
             @click="toggleConsole"
           >
-            {{ consoleOpen ? 'Hide console' : 'Serial console' }}
+            {{ consoleOpen ? $t('Hide console') : $t('Serial console') }}
           </v-btn>
         </div>
 
@@ -130,7 +130,7 @@
             :get-recent-events="() => getRecentSerialLines(activeId)"
             :subscribe="(listener) => subscribeToSerialLines(activeId, listener)"
             :levels="[]"
-            empty-message="No serial data received yet. Connect the device to see incoming data."
+            empty-message="$t('No serial data received yet. Connect the device to see incoming data.')"
           />
         </div>
       </div>
@@ -138,7 +138,7 @@
     <template #actions>
       <template v-if="create">
         <v-spacer></v-spacer>
-        <v-btn text :disabled="!device?.name" @click="onAdd">Add device</v-btn>
+        <v-btn text :disabled="!device?.name" @click="onAdd">{{ $t('Add device') }}</v-btn>
       </template>
       <template v-else>
         <v-btn text @click="onDelete">{{ $t('Delete device') }}</v-btn>
@@ -193,7 +193,9 @@ const device = computed(() =>
 const activeId = computed(() => device.value?.id ?? '')
 const plannedId = computed(() => gnss.planDeviceId(device.value?.name ?? ''))
 const displayId = computed(() => (props.create ? plannedId.value : activeId.value))
-const dialogTitle = computed(() => (props.create ? t('Add GNSS device') : t('Configure {name}', { name: device.value?.name ?? t('device') })))
+const dialogTitle = computed(() =>
+  props.create ? t('Add GNSS device') : t('Configure {name}', { name: device.value?.name ?? t('device') })
+)
 
 const status = computed(() => gnss.statuses[activeId.value] ?? 'disconnected')
 const fix = computed(() => gnss.latestFixes[activeId.value])
@@ -276,12 +278,12 @@ const onDelete = (): void => {
   const name = device.value?.name ?? activeId.value
   showDialog({
     variant: 'warning',
-    title: 'Delete GNSS device?',
-    message: `Delete "${name}"? This disconnects it and removes its data-lake variables.`,
+    title: t('Delete GNSS device?'),
+    message: t('Delete "{name}"? This disconnects it and removes its data-lake variables.', { name }),
     actions: [
-      { text: 'Cancel', size: 'small', action: closeDialog },
+      { text: t('Cancel'), size: 'small', action: closeDialog },
       {
-        text: 'Delete',
+        text: t('Delete'),
         size: 'small',
         action: async () => {
           closeDialog()

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <transition name="slide-in-left" @after-enter="attachScrollListener">
     <div
       v-if="interfaceStore.isMainMenuVisible"

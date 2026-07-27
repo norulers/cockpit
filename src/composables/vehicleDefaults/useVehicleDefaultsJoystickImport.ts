@@ -1,4 +1,5 @@
 import { type InjectionKey, computed, inject, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { openSnackbar } from '@/composables/snackbar'
 import { OtherProtocol } from '@/libs/joystick/protocols/other'
@@ -18,6 +19,7 @@ import {
  */
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const useVehicleDefaultsJoystickImport = (evaluationBundle?: VehicleDefaultsEvaluationBundle) => {
+  const { t } = useI18n()
   const controllerStore = useControllerStore()
   const bundle = evaluationBundle ?? useVehicleDefaultsEvaluation()
   const { evaluation, isCurrentMappingBlank, refreshEvaluation } = bundle
@@ -27,7 +29,7 @@ export const useVehicleDefaultsJoystickImport = (evaluationBundle?: VehicleDefau
   const joystickImportRows = computed(() => {
     const defaultMapping = evaluation.value?.joystick.defaultMapping
     if (!defaultMapping) return []
-    return buildJoystickImportRows(controllerStore.protocolMapping, defaultMapping)
+    return buildJoystickImportRows(controllerStore.protocolMapping, defaultMapping, t)
   })
 
   const hasImportOffer = computed(() => joystickImportRows.value.length > 0)
@@ -80,7 +82,10 @@ export const useVehicleDefaultsJoystickImport = (evaluationBundle?: VehicleDefau
     controllerStore.protocolMapping = nextMapping
 
     openSnackbar({
-      message: `Imported ${selectedJoystickRowsCount.value} default joystick binding(s) for ${evaluation.value?.vehicleTypeName}.`,
+      message: t('Imported {count} default joystick binding(s) for {vehicleTypeName}.', {
+        count: selectedJoystickRowsCount.value,
+        vehicleTypeName: evaluation.value?.vehicleTypeName,
+      }),
       variant: 'success',
       duration: 5000,
     })

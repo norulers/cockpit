@@ -1,7 +1,7 @@
 <template>
   <div class="mission-planning" :style="glassMenuCssVars">
     <div id="planningMap" ref="planningMap" class="relative" />
-    <v-tooltip location="top" text="Generate waypoints">
+    <v-tooltip location="top" :text="$t('Generate waypoints')">
       <template #activator="{ props }">
         <div
           v-if="isCreatingSurvey && surveyPolygonVertexesPositions.length >= 3"
@@ -15,7 +15,7 @@
         </div>
       </template>
     </v-tooltip>
-    <v-tooltip location="top" text="Scan spacing">
+    <v-tooltip location="top" :text="$t('Scan spacing')">
       <template #activator="{ props }">
         <div
           v-if="isCreatingSurvey && surveyPolygonVertexesPositions.length >= 3"
@@ -33,7 +33,7 @@
         </div>
       </template>
     </v-tooltip>
-    <v-tooltip location="top" text="Turnaround distance">
+    <v-tooltip location="top" :text="$t('Turnaround distance')">
       <template #activator="{ props }">
         <div
           v-if="isCreatingSurvey && surveyPolygonVertexesPositions.length >= 3"
@@ -50,7 +50,7 @@
         </div>
       </template>
     </v-tooltip>
-    <v-tooltip location="top" text="Cruise speed">
+    <v-tooltip location="top" :text="$t('Cruise speed')">
       <template #activator="{ props }">
         <div
           v-if="isCreatingSurvey && surveyPolygonVertexesPositions.length >= 3"
@@ -71,7 +71,7 @@
     </v-tooltip>
     <v-tooltip
       location="top"
-      :text="surveyCrosshatch ? 'Disable 90° crosshatch re-fly' : 'Enable 90° crosshatch re-fly'"
+      :text="surveyCrosshatch ? $t('Disable 90° crosshatch re-fly') : $t('Enable 90° crosshatch re-fly')"
     >
       <template #activator="{ props }">
         <div
@@ -91,7 +91,7 @@
         </div>
       </template>
     </v-tooltip>
-    <v-tooltip location="top" text="Clear survey">
+    <v-tooltip location="top" :text="$t('Clear survey')">
       <template #activator="{ props }">
         <div
           v-if="isCreatingSurvey && surveyPolygonVertexesPositions.length >= 3"

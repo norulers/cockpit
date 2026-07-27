@@ -132,8 +132,8 @@
                     location="top"
                     :text="
                       isProtectedNavWaypoint(command)
-                        ? 'A waypoint must keep a MAV_CMD_NAV_WAYPOINT command'
-                        : 'Delete command'
+                        ? $t('A waypoint must keep a MAV_CMD_NAV_WAYPOINT command')
+                        : $t('Delete command')
                     "
                   >
                     <template #activator="{ props: deleteTooltipProps }">

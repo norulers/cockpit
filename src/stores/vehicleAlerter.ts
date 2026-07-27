@@ -26,8 +26,7 @@ export const useVehicleAlerterStore = defineStore('vehicle-alerter', () => {
   watch(
     () => vehicleStore.isArmed,
     (isArmedNow) => {
-      const state = isArmedNow ? 'armed' : 'disarmed'
-      alertStore.pushAlert(new Alert(AlertLevel.Info, i18n.global.t(`vehicle.${state}`)))
+      alertStore.pushAlert(new Alert(AlertLevel.Info, i18n.global.t(isArmedNow ? 'Armed' : 'Disarmed')))
     }
   )
 
@@ -35,8 +34,7 @@ export const useVehicleAlerterStore = defineStore('vehicle-alerter', () => {
     () => vehicleStore.isVehicleOnline,
     (isOnlineNow) => {
       const alertLevel = isOnlineNow ? AlertLevel.Success : AlertLevel.Error
-      const alertMessage = isOnlineNow ? 'connected' : 'disconnected'
-      alertStore.pushAlert(new Alert(alertLevel, i18n.global.t(`vehicle.${alertMessage}`)))
+      alertStore.pushAlert(new Alert(alertLevel, i18n.global.t(isOnlineNow ? 'Vehicle connected' : 'Vehicle disconnected')))
     }
   )
 })

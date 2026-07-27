@@ -17,7 +17,7 @@
         <span class="text-xl leading-6"> {{ String.fromCharCode(0x20) }} {{ miniWidget.options.variableUnit }} </span>
       </div>
       <span class="w-full text-sm absolute bottom-[0.5rem] whitespace-nowrap text-ellipsis overflow-x-hidden">
-        {{ miniWidget.options.displayName }}
+        {{ $t(miniWidget.options.displayName) }}
       </span>
     </div>
   </div>
@@ -285,7 +285,7 @@
                     {{ template.variableUnit }}
                   </span>
                   <span class="w-full text-sm font-semibold leading-4 whitespace-nowrap">
-                    {{ template.displayName }}
+                    {{ $t(template.displayName) }}
                   </span>
                 </div>
               </div>

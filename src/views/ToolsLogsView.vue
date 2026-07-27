@@ -165,43 +165,42 @@
       <v-dialog v-model="showSettingsDialog" max-width="460px">
         <v-card class="rounded-lg export-settings-card text-white" :style="interfaceStore.globalGlassMenuStyles">
           <v-card-title class="d-flex align-center py-4">
-            <span class="text-h6 font-weight-bold">Data export settings</span>
+            <span class="text-h6 font-weight-bold">{{ $t('Data export settings') }}</span>
             <v-spacer />
             <v-tooltip location="bottom" max-width="360px">
               <template #activator="{ props }">
                 <v-icon v-bind="props" size="small">mdi-information-outline</v-icon>
               </template>
               <div class="text-caption">
-                <p class="font-weight-bold mb-1">Column labels</p>
-                <p class="mb-1">How each variable's column is named in the exported files.</p>
+                <p class="font-weight-bold mb-1">{{ $t('Column labels') }}</p>
+                <p class="mb-1">{{ $t('How each variable\'s column is named in the exported files.') }}</p>
                 <ul class="pl-4 mb-2">
-                  <li><strong>Variable ID</strong> — full data-lake path (e.g. /mavlink/1/1/ATTITUDE/roll).</li>
-                  <li><strong>Short variable ID</strong> — only the last segment (e.g. roll).</li>
-                  <li><strong>Variable name</strong> — human-readable name (e.g. Roll).</li>
+                  <li><strong>{{ $t('Variable ID') }}</strong> — full data-lake path (e.g. /mavlink/1/1/ATTITUDE/roll).</li>
+                  <li><strong>{{ $t('Short variable ID') }}</strong> — only the last segment (e.g. roll).</li>
+                  <li><strong>{{ $t('Variable name') }}</strong> — human-readable name (e.g. Roll).</li>
                 </ul>
                 <p class="mb-2">
-                  If two variables would end up with the same label, both fall back to their full IDs so columns stay
-                  unique.
+                  {{ $t('If two variables would end up with the same label, both fall back to their full IDs so columns stay unique.') }}
                 </p>
-                <p class="font-weight-bold mb-1">Logging interval</p>
+                <p class="font-weight-bold mb-1">{{ $t('Logging interval') }}</p>
                 <ul class="pl-4">
-                  <li><strong>Raw</strong> — a row is recorded whenever any selected variable changes.</li>
-                  <li><strong>Fixed interval</strong> — all selected variables are sampled every N milliseconds.</li>
+                  <li><strong>{{ $t('Raw') }}</strong> — a row is recorded whenever any selected variable changes.</li>
+                  <li><strong>{{ $t('Fixed interval') }}</strong> — all selected variables are sampled every N milliseconds.</li>
                 </ul>
               </div>
             </v-tooltip>
           </v-card-title>
           <v-card-text class="px-6">
-            <p class="text-sm mb-1 font-weight-medium">Column labels</p>
-            <p class="text-sm mb-2">How variable columns are labeled in CSV and JSON files.</p>
+            <p class="text-sm mb-1 font-weight-medium">{{ $t('Column labels') }}</p>
+            <p class="text-sm mb-2">{{ $t('How variable columns are labeled in CSV and JSON files.') }}</p>
             <v-radio-group v-model="exportVariableKey" density="compact" hide-details>
               <v-radio :label="$t('Variable ID')" value="id" />
               <v-radio :label="$t('Short variable ID')" value="short-id" />
               <v-radio :label="$t('Variable name')" value="name" />
             </v-radio-group>
 
-            <p class="text-sm mt-5 mb-1 font-weight-medium">Logging interval</p>
-            <p class="text-sm mb-2">How often selected variables are recorded.</p>
+            <p class="text-sm mt-5 mb-1 font-weight-medium">{{ $t('Logging interval') }}</p>
+            <p class="text-sm mb-2">{{ $t('How often selected variables are recorded.') }}</p>
             <v-radio-group v-model="loggingMode" density="compact" hide-details>
               <v-radio :label="$t('Raw (record on every value change)')" value="raw" />
               <div class="flex items-center gap-2">

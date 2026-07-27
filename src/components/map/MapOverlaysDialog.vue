@@ -1,7 +1,7 @@
 <template>
   <v-dialog :model-value="modelValue" width="700" @update:model-value="emit('update:modelValue', $event)">
     <v-card :style="interfaceStore.globalGlassMenuStyles">
-      <v-card-title class="text-lg text-center font-semibold mt-2">Map overlays (GeoTIFF)</v-card-title>
+      <v-card-title class="text-lg text-center font-semibold mt-2">{{ $t('Map overlays (GeoTIFF)') }}</v-card-title>
       <v-icon icon="mdi-close" class="absolute top-3 right-5 mt-2" @click="emit('update:modelValue', false)" />
       <v-card-text>
         <div class="flex flex-col gap-y-3">
@@ -11,13 +11,12 @@
           >
             <v-icon icon="mdi-information-outline" size="16" class="mt-[2px]" />
             <span>
-              In Cockpit Lite, overlays are stored in limited browser storage that the browser may clear, so very large
-              surveys may fail to save or not persist. For large datasets or reliable storage, use Cockpit Standalone.
+              {{ $t('In Cockpit Lite, overlays are stored in limited browser storage that the browser may clear, so very large surveys may fail to save or not persist. For large datasets or reliable storage, use Cockpit Standalone.') }}
             </span>
           </div>
 
           <div class="flex items-center justify-between">
-            <p class="text-md">Loaded overlays</p>
+            <p class="text-md">{{ $t('Loaded overlays') }}</p>
             <v-btn
               class="bg-[#FFFFFF22]"
               variant="plain"
@@ -26,12 +25,12 @@
               :loading="importingOverlays"
               @click="addOverlays"
             >
-              Add GeoTIFF
+              {{ $t('Add GeoTIFF') }}
             </v-btn>
           </div>
 
           <p v-if="missionStore.mapOverlays.length === 0" class="text-sm text-slate-400">
-            No overlays loaded. Use "Add GeoTIFF" to load a survey.
+            {{ $t('No overlays loaded. Use "Add GeoTIFF" to load a survey.') }}
           </p>
 
           <div
@@ -43,7 +42,7 @@
               <div class="flex items-center gap-x-2 min-w-0">
                 <v-progress-circular
                   v-if="loadingIds.includes(overlay.id)"
-                  v-tooltip.bottom="'Rendering overlay…'"
+                  v-tooltip.bottom="$t('Rendering overlay…')"
                   indeterminate
                   size="16"
                   width="2"
@@ -93,7 +92,7 @@
                 theme="dark"
               />
               <div class="flex items-center gap-x-2 flex-1 min-w-[200px]">
-                <span class="text-sm text-slate-200 whitespace-nowrap">Opacity</span>
+                <span class="text-sm text-slate-200 whitespace-nowrap">{{ $t('Opacity') }}</span>
                 <v-slider
                   v-model="overlay.opacity"
                   :min="0"

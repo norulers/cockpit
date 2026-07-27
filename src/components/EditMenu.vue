@@ -159,7 +159,7 @@
                   />
                   <v-divider vertical />
                   <p class="ml-3 overflow-hidden 2xl:text-sm text-xs text-ellipsis whitespace-nowrap">
-                    {{ widget.name }}
+                    {{ $t(widget.name) }}
                   </p>
                   <div class="grow" />
                   <v-divider vertical class="opacity-10 mr-[2px]" />
@@ -359,7 +359,7 @@
                 >
                   <div class="flex items-center justify-start w-full overflow-auto">
                     <p class="overflow-hidden select-none text-ellipsis whitespace-nowrap 2xl:text-sm text-xs ml-3">
-                      {{ widget.name || widget.component }}
+                      {{ $t(widget.name || widget.component) }}
                     </p>
                   </div>
                   <v-divider vertical class="opacity-10 mr-1" />
@@ -442,7 +442,7 @@
           v-if="widget.isExternal"
           class="absolute top-0 left-0 bg-[#135da3] text-white text-xs px-1 py-0.5 rounded-tl-md rounded-br-md"
         >
-          External
+          {{ $t('External') }}
         </div>
 
         <v-tooltip location="top" theme="light">
@@ -454,7 +454,7 @@
               :class="{ 'bg-[#135da3]': widget.isExternal, 'bg-[#3B7B62]': !widget.isExternal }"
             >
               <span class="whitespace-normal text-center">{{
-                $t(widget.name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (str) => str.toUpperCase()))
+                $t(widget.name)
               }}</span>
             </div>
           </template>
@@ -488,8 +488,7 @@
           class="flex items-center justify-center w-full py-1 px-2 transition-all bg-[#3B7B62] rounded-b-md text-white"
         >
           <span class="whitespace-normal text-center">{{
-            miniWidget.name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (str) => str.toUpperCase()) ||
-            $t('Very Generic Indicator')
+            miniWidget.name ? $t(miniWidget.name) : $t('Very Generic Indicator')
           }}</span>
         </div>
       </div>
@@ -516,8 +515,7 @@
           class="flex items-center justify-center w-full py-1 px-2 transition-all bg-[#3B7B62] rounded-b-md text-white"
         >
           <span class="whitespace-normal text-center">{{
-            miniWidget.name.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (str) => str.toUpperCase()) ||
-            'Very generic indicator'
+            miniWidget.name ? $t(miniWidget.name) : $t('Very Generic Indicator')
           }}</span>
         </div>
       </div>

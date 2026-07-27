@@ -26,7 +26,7 @@
         ><span>{{ totalMissionLength }}</span>
       </div>
       <div v-if="maxDistance !== '—'" class="flex justify-between">
-        <span>Max distance from {{ maxDistanceReferenceLabel }}</span
+        <span>{{ $t('Max distance from {reference}', { reference: $t(maxDistanceReferenceLabel) }) }}</span
         ><span>{{ maxDistance }}</span>
       </div>
       <div class="flex justify-between">

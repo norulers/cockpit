@@ -98,10 +98,10 @@
 
   <v-dialog v-model="widgetStore.widgetManagerVars(widget.hash).configMenuOpen" width="auto">
     <v-card class="pa-2" :style="interfaceStore.globalGlassMenuStyles">
-      <v-card-title class="text-center">Map widget settings</v-card-title>
+      <v-card-title class="text-center">{{ $t('Map widget settings') }}</v-card-title>
       <v-card-text>
         <ExpansiblePanel compact :is-expanded="!interfaceStore.isOnSmallScreen" no-bottom-divider no-top-divider>
-          <template #title>Display</template>
+          <template #title>{{ $t('Display') }}</template>
           <template #content>
             <v-row>
               <v-col cols="4">

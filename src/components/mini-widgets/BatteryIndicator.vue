@@ -82,7 +82,7 @@
             size="30"
             variant="text"
             class="text-white text-[22px]"
-            aria-label="Close"
+            :aria-label="$t('Close')"
             @click="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen = false"
           >
             <i class="mdi mdi-close"></i>

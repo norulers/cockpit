@@ -45,21 +45,21 @@
 
           <v-expansion-panels v-model="expandedPanel" class="editors-container" multiple>
             <v-expansion-panel value="html">
-              <v-expansion-panel-title static height="30px" class="text-white/60"> HTML </v-expansion-panel-title>
+              <v-expansion-panel-title static height="30px" class="text-white/60"> {{ $t('HTML') }} </v-expansion-panel-title>
               <v-expansion-panel-text eager>
                 <div ref="htmlEditorContainer" class="editor-container" :style="{ height: editorHeight }" />
               </v-expansion-panel-text>
             </v-expansion-panel>
 
             <v-expansion-panel value="js">
-              <v-expansion-panel-title static height="30px" class="text-white/60"> JS </v-expansion-panel-title>
+              <v-expansion-panel-title static height="30px" class="text-white/60"> {{ $t('JavaScript') }} </v-expansion-panel-title>
               <v-expansion-panel-text eager>
                 <div ref="jsEditorContainer" class="editor-container" :style="{ height: editorHeight }" />
               </v-expansion-panel-text>
             </v-expansion-panel>
 
             <v-expansion-panel value="css">
-              <v-expansion-panel-title static height="30px" class="text-white/60"> CSS </v-expansion-panel-title>
+              <v-expansion-panel-title static height="30px" class="text-white/60"> {{ $t('CSS') }} </v-expansion-panel-title>
               <v-expansion-panel-text eager>
                 <div ref="cssEditorContainer" class="editor-container" :style="{ height: editorHeight }" />
               </v-expansion-panel-text>

@@ -6,9 +6,11 @@ import { capitalize } from 'vue'
 
 import { useInteractionDialog } from '@/composables/interactionDialog'
 import { getDataLakeVariableData } from '@/libs/actions/data-lake'
-import { sendManualControl } from '@/libs/communication/mavlink'
+import { sendMavlinkMessage } from '@/libs/communication/mavlink'
+import { MavComponent, MAVLinkType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
+import type { Message } from '@/libs/connection/m2r/messages/mavlink2rest-message'
 import { modifierKeyActions, otherAvailableActions } from '@/libs/joystick/protocols/other'
-import { round } from '@/libs/utils'
+import { round, scale } from '@/libs/utils'
 import type { ArduPilot } from '@/libs/vehicle/ardupilot/ardupilot'
 import { type JoystickProtocolActionsMapping, type JoystickState, type ProtocolAction, CockpitModifierKeyOption, JoystickButton, JoystickProtocol } from '@/types/joystick'
 
@@ -356,6 +358,9 @@ const mavlinkManualControlButtonFunctions: { [key in MAVLinkButtonFunction]: MAV
 // Exclude shift key so it's not mapped by user, as it's automatically handled by Cockpit backend.
 export const { [MAVLinkButtonFunction.shift]: _, ...availableMavlinkManualControlButtonFunctions } = mavlinkManualControlButtonFunctions
 
+/** Scale MANUAL_CONTROL axis (-1000 to 1000) to RC PWM (1000 to 2000) */
+const pwmFromAxis = (val: number): number => Math.round(scale(val, -1000, 1000, 1000, 2000))
+
 export class MavlinkManualControlState {
   public static readonly BUTTONS_PER_BITFIELD = 16
   x = 0
@@ -404,7 +409,40 @@ export class MavlinkManualControlManager {
 
   sendManualControl(): void {
     if (!this.manualControlState) return
-    sendManualControl(this.manualControlState, this.vehicle?.systemId ?? 1)
+    this.sendManualControlMessage(this.manualControlState, this.vehicle?.systemId ?? 1)
+  }
+
+  /**
+   * Send RC_CHANNELS_OVERRIDE alongside MANUAL_CONTROL (like MissionPlanner).
+   * Converts x/y/z/r to PWM and sends via MAVLink2Rest WebSocket.
+   */
+  sendRcOverride(): void {
+    if (!this.manualControlState) return
+    const s = this.manualControlState
+    const rcMsg: Message.RcChannelsOverride = {
+      type: MAVLinkType.RC_CHANNELS_OVERRIDE,
+      // x (roll) → RC1, y (pitch, inverted) → RC2, z (throttle) → RC3, r (yaw) → RC4
+      chan1_raw: pwmFromAxis(s.x),
+      chan2_raw: pwmFromAxis(-s.y),
+      chan3_raw: pwmFromAxis(s.z),
+      chan4_raw: pwmFromAxis(s.r),
+      chan5_raw: 65535, chan6_raw: 65535, chan7_raw: 65535, chan8_raw: 65535,
+      chan9_raw: 65535, chan10_raw: 65535, chan11_raw: 65535, chan12_raw: 65535,
+      chan13_raw: 65535, chan14_raw: 65535, chan15_raw: 65535, chan16_raw: 65535,
+      chan17_raw: 65535, chan18_raw: 65535,
+      target_system: this.vehicle?.systemId ?? 1,
+      target_component: 1,
+    }
+    sendMavlinkMessage(rcMsg)
+  }
+
+  private sendManualControlMessage(state: MavlinkManualControlState, targetId: number): void {
+    sendMavlinkMessage({
+      type: MAVLinkType.MANUAL_CONTROL,
+      x: state.x, y: state.y, z: state.z, r: state.r, s: state.s, t: state.t,
+      buttons: state.buttons, buttons2: state.buttons2,
+      target: targetId,
+    } as Message.ManualControl)
   }
 
   updateControllerData = (state: JoystickState, protocolActionsMapping: JoystickProtocolActionsMapping, activeButtonsActions: ProtocolAction[]): void => {

@@ -21,27 +21,17 @@
 
     <InteractionDialog
       v-model="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen"
-      :title="joystickConnected ? t('Joystick connected') : t('Joystick disconnected')"
-      max-width="400px"
+      :title="$t('Joystick RC Channel Setup')"
+      max-width="500px"
       variant="text-only"
     >
       <template #content>
-        <div class="flex items-center justify-center mb-4 flex-col">
-          <span class="mr-2"></span>
-          <v-switch
-            :model-value="controllerStore.enableForwarding"
-            hide-details
-            :label="switchLabel"
-            color="white"
-            :disabled="!joystickConnected"
-            @update:model-value="setJoystickForwarding"
-          />
-        </div>
+        <JoystickChannelSetup />
       </template>
       <template #actions>
-        <v-btn @click="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen = false">{{
-          $t('Close')
-        }}</v-btn>
+        <v-btn @click="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen = false">
+          {{ $t('Close') }}
+        </v-btn>
       </template>
     </InteractionDialog>
   </div>
@@ -52,18 +42,13 @@ import { computed, onMounted, ref, toRefs } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import InteractionDialog from '@/components/InteractionDialog.vue'
+import JoystickChannelSetup from '@/components/JoystickChannelSetup.vue'
 import { joystickManager } from '@/libs/joystick/manager'
 import { useControllerStore } from '@/stores/controller'
 import { useWidgetManagerStore } from '@/stores/widgetManager'
 import type { MiniWidget } from '@/types/widgets'
 
-/**
- * Props for the JoystickCommIndicator component
- */
 const props = defineProps<{
-  /**
-   * Configuration of the widget
-   */
   miniWidget: MiniWidget
 }>()
 const miniWidget = toRefs(props).miniWidget
@@ -88,14 +73,4 @@ const tooltipText = computed(() => {
   if (!controllerStore.enableForwarding) return t('Connected but disabled')
   return t('Connected and enabled')
 })
-
-const switchLabel = computed(() => {
-  if (controllerStore.enableForwarding) return t('Commands enabled')
-  return t('Commands paused')
-})
-
-const setJoystickForwarding = (value: boolean | null): void => {
-  logUserAction(`${value ? 'Enabled' : 'Disabled'} joystick command forwarding`)
-  controllerStore.enableForwarding = Boolean(value)
-}
 </script>

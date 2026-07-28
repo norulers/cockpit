@@ -699,6 +699,7 @@ import { useI18n } from 'vue-i18n'
 
 import blueboatMarkerImage from '@/assets/blueboat-marker.avif'
 import brov2MarkerImage from '@/assets/brov2-marker.avif'
+import copterMarkerImage from '@/assets/arducopter-top-view.avif'
 import genericVehicleMarkerImage from '@/assets/generic-vehicle-marker.avif'
 import MapNorthIndicator from '@/components/map/MapNorthIndicator.vue'
 import MapOverlaysDialog from '@/components/map/MapOverlaysDialog.vue'
@@ -4208,15 +4209,27 @@ watch(vehicleStore.coordinates, () => {
   if (vehicleMarker.value === undefined) {
     let vehicleIconUrl = genericVehicleMarkerImage
 
-    if (vehicleStore.vehicleType === MavType.MAV_TYPE_SURFACE_BOAT) {
+    if (missionStore.customVehicleIcon) {
+      vehicleIconUrl = missionStore.customVehicleIcon
+    } else if (vehicleStore.vehicleType === MavType.MAV_TYPE_SURFACE_BOAT) {
       vehicleIconUrl = blueboatMarkerImage
     } else if (vehicleStore.vehicleType === MavType.MAV_TYPE_SUBMARINE) {
       vehicleIconUrl = brov2MarkerImage
+    } else if (
+      [
+        MavType.MAV_TYPE_QUADROTOR,
+        MavType.MAV_TYPE_HEXAROTOR,
+        MavType.MAV_TYPE_OCTOROTOR,
+        MavType.MAV_TYPE_TRICOPTER,
+        MavType.MAV_TYPE_DODECAROTOR,
+      ].includes(vehicleStore.vehicleType)
+    ) {
+      vehicleIconUrl = copterMarkerImage
     }
 
     const vehicleMarkerIcon = L.divIcon({
       className: 'vehicle-marker',
-      html: `<img src="${vehicleIconUrl}" style="width: 64px; height: 64px;">`,
+      html: `<img src="${vehicleIconUrl}" style="width: 64px; height: 64px; object-fit: contain;">`,
       iconSize: [64, 64],
       iconAnchor: [32, 32],
     })

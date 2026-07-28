@@ -1206,7 +1206,7 @@ watch(vehicleStore.coordinates, () => {
 
     const vehicleMarkerIcon = L.divIcon({
       className: 'vehicle-marker',
-      html: `<img src="${vehicleIconUrl}" style="width: 64px; height: 64px;">`,
+      html: `<img src="${vehicleIconUrl}" style="width: 64px; height: 64px; object-fit: contain;">`,
       iconSize: [64, 64],
       iconAnchor: [32, 32],
     })

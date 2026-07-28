@@ -979,6 +979,8 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
     // Send MAVLink Manual Control message
     if (controllerStore.enableForwarding) {
       mavlinkManualControlManager.sendManualControl()
+      // Also send RC_CHANNELS_OVERRIDE to override physical RC receiver (like MissionPlanner)
+      mavlinkManualControlManager.sendRcOverride()
     }
   }, 40)
   setInterval(() => sendGcsHeartbeat(), 1000)

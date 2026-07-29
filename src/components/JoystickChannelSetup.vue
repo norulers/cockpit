@@ -79,8 +79,8 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useBlueOsStorage } from '@/composables/settingsSyncer'
-import { DataLakeVariableAction } from '@/libs/joystick/protocols/data-lake'
 import { otherAvailableActions } from '@/libs/joystick/protocols/other'
+import { joystickInputAxes } from '@/libs/joystick/protocols/predefined-resources'
 import { useControllerStore } from '@/stores/controller'
 import { type JoystickProtocolActionsMapping, Joystick, JoystickAxis } from '@/types/joystick'
 
@@ -193,16 +193,12 @@ interface ChannelRow {
   barWidth: number
 }
 
-/**
- * Direct output actions for RC1→RC4. Unlike joystickInputAxes (which target inputs/mavlink/axis-*
- * requiring a transforming function), these write straight to outputs/mavlink/axis-* so
- * MavlinkManualControlManager reads them immediately — same direct path as MissionPlanner.
- */
-const rcOutputActions = [
-  new DataLakeVariableAction({ id: 'outputs/mavlink/axis-x', name: 'Axis X', type: 'number' }),
-  new DataLakeVariableAction({ id: 'outputs/mavlink/axis-y', name: 'Axis Y', type: 'number' }),
-  new DataLakeVariableAction({ id: 'outputs/mavlink/axis-z', name: 'Axis Z', type: 'number' }),
-  new DataLakeVariableAction({ id: 'outputs/mavlink/axis-r', name: 'Axis R', type: 'number' }),
+/** Protocol actions for RC1→RC4 (axis_x=Roll, axis_y=Pitch, axis_z=Throttle, axis_r=Yaw) */
+const rcChannelActions = [
+  joystickInputAxes.axis_x,
+  joystickInputAxes.axis_y,
+  joystickInputAxes.axis_z,
+  joystickInputAxes.axis_r,
 ]
 
 const channels = reactive<ChannelRow[]>(
@@ -232,16 +228,16 @@ function applyMappingToProtocol(): void {
     const cockpitAxis = cockpitAxes?.[hwAxis] ?? hwAxis
     if (cockpitAxis === null) continue
     mapping.axesCorrespondencies[cockpitAxis] = {
-      action: rcOutputActions[i],
+      action: rcChannelActions[i],
       min: -1000,
       max: 1000,
     }
   }
 
-  // Clear RC output actions from axes no longer assigned
+  // Clear RC channel actions from axes no longer assigned
   for (const axis of [JoystickAxis.A0, JoystickAxis.A1, JoystickAxis.A2, JoystickAxis.A3]) {
     const existing = mapping.axesCorrespondencies[axis]
-    if (existing && rcOutputActions.some((a) => a.id === existing.action.id)) {
+    if (existing && rcChannelActions.some((a) => a.id === existing.action.id)) {
       const stillAssigned = channels.slice(0, 4).some((ch) => {
         const ca = cockpitAxes?.[ch.axis] ?? ch.axis
         return ca === axis && ch.axis >= 0

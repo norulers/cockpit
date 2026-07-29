@@ -11,13 +11,8 @@
         theme="dark"
         class="flex-1"
       />
-      <v-btn
-        size="small"
-        :color="controllerStore.enableForwarding ? 'red' : 'green'"
-        variant="tonal"
-        @click="toggleForwarding"
-      >
-        {{ controllerStore.enableForwarding ? $t('Disable') : $t('Enable') }}
+      <v-btn size="small" :color="enableDirectControl ? 'red' : 'green'" variant="tonal" @click="toggleForwarding">
+        {{ enableDirectControl ? $t('Disable') : $t('Enable') }}
       </v-btn>
       <v-btn size="small" color="green" variant="tonal" :disabled="saved" @click="saveChannels">
         {{ saved ? $t('saved') : $t('Save') }}
@@ -79,29 +74,18 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useBlueOsStorage } from '@/composables/settingsSyncer'
-import { otherAvailableActions } from '@/libs/joystick/protocols/other'
-import { joystickInputAxes } from '@/libs/joystick/protocols/predefined-resources'
 import { useControllerStore } from '@/stores/controller'
-import { type JoystickProtocolActionsMapping, Joystick, JoystickAxis } from '@/types/joystick'
+import { Joystick } from '@/types/joystick'
 
 const { t } = useI18n()
 const controllerStore = useControllerStore()
 
 const toggleForwarding = (): void => {
-  const newVal = !controllerStore.enableForwarding
-  logUserAction(`${newVal ? 'Enabled' : 'Disabled'} joystick forwarding`)
-  if (newVal) {
-    // Backup current protocolMapping before taking over (mutual exclusivity)
-    preOverrideBackup.value = JSON.parse(JSON.stringify(controllerStore.protocolMapping.value))
-    applyMappingToProtocol()
-  } else {
-    // Restore pre-override mapping so the built-in config resumes control
-    if (preOverrideBackup.value) {
-      controllerStore.protocolMapping.value = preOverrideBackup.value
-      preOverrideBackup.value = null
-    }
-  }
-  controllerStore.enableForwarding = newVal
+  enableDirectControl.value = !enableDirectControl.value
+  localStorage.setItem('cockpit-rc-direct-control-enabled', String(enableDirectControl.value))
+  controllerStore.enableForwarding = false
+  controllerStore.preventJoystickForwarding = enableDirectControl.value
+  logUserAction(`${enableDirectControl.value ? 'Enabled' : 'Disabled'} joystick control`)
 }
 
 /** Dropdown items for joystick selection */
@@ -169,12 +153,6 @@ const defaultRcMapping = (): PersistedRcMapping => ({
 
 const persistedMapping = useBlueOsStorage<PersistedRcMapping>('cockpit-rc-channel-axis-mapping', defaultRcMapping())
 
-/** Backup of protocolMapping before RC override, restored on disable for mutual exclusivity. */
-const preOverrideBackup = useBlueOsStorage<JoystickProtocolActionsMapping | null>(
-  'cockpit-rc-pre-override-backup',
-  null
-)
-
 /** RC channel row displayed in the setup UI */
 interface ChannelRow {
   /** Zero-based channel index */
@@ -193,14 +171,6 @@ interface ChannelRow {
   barWidth: number
 }
 
-/** Protocol actions for RC1→RC4 (axis_x=Roll, axis_y=Pitch, axis_z=Throttle, axis_r=Yaw) */
-const rcChannelActions = [
-  joystickInputAxes.axis_x,
-  joystickInputAxes.axis_y,
-  joystickInputAxes.axis_z,
-  joystickInputAxes.axis_r,
-]
-
 const channels = reactive<ChannelRow[]>(
   CHANNEL_NAMES.map((label, i) => ({
     id: i,
@@ -215,50 +185,15 @@ const channels = reactive<ChannelRow[]>(
 
 const saved = ref(true)
 
-/** Push the current channel mapping into protocolMapping so the control pipeline uses it. */
-function applyMappingToProtocol(): void {
-  const joystick = selectedJoystick()
-  const cockpitAxes = joystick?.gamepadToCockpitMap?.axes
-  const mapping = { ...controllerStore.protocolMapping.value }
-
-  for (let i = 0; i < 4; i++) {
-    const hwAxis = channels[i].axis
-    if (hwAxis < 0) continue
-    // Write to raw hardware axis index (the data lake callback uses raw-order axes)
-    const cockpitAxis = cockpitAxes?.[hwAxis] ?? hwAxis
-    if (cockpitAxis === null) continue
-    mapping.axesCorrespondencies[cockpitAxis] = {
-      action: rcChannelActions[i],
-      min: -1000,
-      max: 1000,
-    }
-  }
-
-  // Clear RC channel actions from axes no longer assigned
-  for (const axis of [JoystickAxis.A0, JoystickAxis.A1, JoystickAxis.A2, JoystickAxis.A3]) {
-    const existing = mapping.axesCorrespondencies[axis]
-    if (existing && rcChannelActions.some((a) => a.id === existing.action.id)) {
-      const stillAssigned = channels.slice(0, 4).some((ch) => {
-        const ca = cockpitAxes?.[ch.axis] ?? ch.axis
-        return ca === axis && ch.axis >= 0
-      })
-      if (!stillAssigned) {
-        mapping.axesCorrespondencies[axis] = { action: otherAvailableActions.no_function, min: -1000, max: 1000 }
-      }
-    }
-  }
-
-  controllerStore.protocolMapping.value = mapping
-}
+/** Flag to enable/disable direct control (mutual exclusivity) */
+const enableDirectControl = ref(localStorage.getItem('cockpit-rc-direct-control-enabled') === 'true')
 
 const saveChannels = (): void => {
   logUserAction('Saved RC channel axis mapping')
-  persistedMapping.value = {
-    axes: channels.map((ch) => ch.axis),
-    reversed: channels.map((ch) => ch.reversed),
-  }
+  const data = { axes: channels.map((ch) => ch.axis), reversed: channels.map((ch) => ch.reversed) }
+  persistedMapping.value = data
+  localStorage.setItem('cockpit-rc-channel-axis-mapping', JSON.stringify(data))
   saved.value = true
-  applyMappingToProtocol()
 }
 
 // Track unsaved changes

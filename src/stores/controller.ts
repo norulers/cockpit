@@ -204,7 +204,7 @@ export const useControllerStore = defineStore('controller', () => {
           maxWidth: 720,
           persistent: false,
         })
-      } else {
+      } else if (!preventJoystickForwarding.value) {
         console.info('No other sources of joystick commands detected. Enabling joystick forwarding.')
         enableForwarding.value = true
       }
@@ -546,6 +546,7 @@ export const useControllerStore = defineStore('controller', () => {
     joystickCalibrationOptions,
     currentMainJoystick,
     disabledJoysticks,
+    preventJoystickForwarding,
     checkForOtherManualControlSources,
   }
 })

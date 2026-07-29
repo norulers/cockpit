@@ -2,12 +2,7 @@
   <div>
     <v-tooltip :text="tooltipText" location="bottom">
       <template #activator="{ props: tooltipProps }">
-        <div
-          v-bind="tooltipProps"
-          class="relative cursor-pointer"
-          :class="indicatorClass"
-          @click="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen = true"
-        >
+        <div v-bind="tooltipProps" class="relative cursor-pointer" :class="indicatorClass" @click="openConfigMenu">
           <FontAwesomeIcon icon="fa-solid fa-gamepad" size="xl" />
           <FontAwesomeIcon
             v-if="!joystickConnected || !controllerStore.enableForwarding"
@@ -20,7 +15,7 @@
     </v-tooltip>
 
     <InteractionDialog
-      v-model="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen"
+      v-model:show-dialog="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen"
       :title="$t('Joystick RC Channel Setup')"
       max-width="500px"
       variant="text-only"
@@ -49,6 +44,9 @@ import { useWidgetManagerStore } from '@/stores/widgetManager'
 import type { MiniWidget } from '@/types/widgets'
 
 const props = defineProps<{
+  /**
+   *
+   */
   miniWidget: MiniWidget
 }>()
 const miniWidget = toRefs(props).miniWidget
@@ -61,6 +59,11 @@ const joystickConnected = ref(false)
 onMounted(() => {
   joystickManager.onJoystickConnectionUpdate((event) => (joystickConnected.value = event.size !== 0))
 })
+
+const openConfigMenu = (): void => {
+  logUserAction('Opened the joystick RC channel setup menu')
+  widgetStore.miniWidgetManagerVars(miniWidget.value.hash).configMenuOpen = true
+}
 
 const indicatorClass = computed(() => {
   if (!joystickConnected.value) return 'text-gray-700'

@@ -83,7 +83,7 @@ const controllerStore = useControllerStore()
 const toggleForwarding = (): void => {
   enableDirectControl.value = !enableDirectControl.value
   localStorage.setItem('cockpit-rc-direct-control-enabled', String(enableDirectControl.value))
-  controllerStore.enableForwarding = false
+  controllerStore.enableForwarding = !enableDirectControl.value
   controllerStore.preventJoystickForwarding = enableDirectControl.value
   logUserAction(`${enableDirectControl.value ? 'Enabled' : 'Disabled'} joystick control`)
 }

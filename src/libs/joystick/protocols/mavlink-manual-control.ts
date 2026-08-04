@@ -7,10 +7,10 @@ import { capitalize } from 'vue'
 import { useInteractionDialog } from '@/composables/interactionDialog'
 import { getDataLakeVariableData } from '@/libs/actions/data-lake'
 import { sendMavlinkMessage } from '@/libs/communication/mavlink'
-import { MavComponent, MAVLinkType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
+import { MAVLinkType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
 import type { Message } from '@/libs/connection/m2r/messages/mavlink2rest-message'
 import { modifierKeyActions, otherAvailableActions } from '@/libs/joystick/protocols/other'
-import { round, scale } from '@/libs/utils'
+import { getRcChannelRange, manualAxisToPwm } from '@/libs/joystick/rc-params'
 import type { ArduPilot } from '@/libs/vehicle/ardupilot/ardupilot'
 import { type JoystickProtocolActionsMapping, type JoystickState, type ProtocolAction, CockpitModifierKeyOption, JoystickButton, JoystickProtocol } from '@/types/joystick'
 
@@ -358,9 +358,6 @@ const mavlinkManualControlButtonFunctions: { [key in MAVLinkButtonFunction]: MAV
 // Exclude shift key so it's not mapped by user, as it's automatically handled by Cockpit backend.
 export const { [MAVLinkButtonFunction.shift]: _, ...availableMavlinkManualControlButtonFunctions } = mavlinkManualControlButtonFunctions
 
-/** Scale MANUAL_CONTROL axis (-1000 to 1000) to RC PWM (1000 to 2000) */
-const pwmFromAxis = (val: number): number => Math.round(scale(val, -1000, 1000, 1000, 2000))
-
 export class MavlinkManualControlState {
   public static readonly BUTTONS_PER_BITFIELD = 16
   x = 0
@@ -413,20 +410,30 @@ export class MavlinkManualControlManager {
   }
 
   /**
-   * Send RC_CHANNELS_OVERRIDE alongside MANUAL_CONTROL (like MissionPlanner).
-   * Converts x/y/z/r to PWM and sends via MAVLink2Rest WebSocket.
+   * Send RC_CHANNELS_OVERRIDE with gamepad axes mapped to RC channels 1-8 (like MissionPlanner).
+   * Uses vehicle-calibrated PWM ranges and per-channel Expo curves.
    */
   sendRcOverride(): void {
     if (!this.manualControlState) return
     const s = this.manualControlState
+    const mapping = this.getRcChannelMapping()
+    const raw = (idx: number, axisVal: number): number => {
+      if (idx >= mapping.axes.length || mapping.axes[idx] < 0) return 65535
+      const range = getRcChannelRange(this.currentVehicleParameters, idx + 1)
+      const expo = mapping.expo?.[idx] ?? 0
+      return manualAxisToPwm(axisVal, range, expo, mapping.reversed[idx] ?? false)
+    }
     const rcMsg: Message.RcChannelsOverride = {
       type: MAVLinkType.RC_CHANNELS_OVERRIDE,
-      // x (roll) → RC1, y (pitch, inverted) → RC2, z (throttle) → RC3, r (yaw) → RC4
-      chan1_raw: pwmFromAxis(s.x),
-      chan2_raw: pwmFromAxis(-s.y),
-      chan3_raw: pwmFromAxis(s.z),
-      chan4_raw: pwmFromAxis(s.r),
-      chan5_raw: 65535, chan6_raw: 65535, chan7_raw: 65535, chan8_raw: 65535,
+      // x (roll) → RC1, y (pitch) → RC2, z (throttle) → RC3, r (yaw) → RC4
+      chan1_raw: raw(0, s.x),
+      chan2_raw: raw(1, s.y),
+      chan3_raw: raw(2, s.z),
+      chan4_raw: raw(3, s.r),
+      chan5_raw: raw(4, s.s),
+      chan6_raw: raw(5, s.t),
+      chan7_raw: raw(6, 0),
+      chan8_raw: raw(7, 0),
       chan9_raw: 65535, chan10_raw: 65535, chan11_raw: 65535, chan12_raw: 65535,
       chan13_raw: 65535, chan14_raw: 65535, chan15_raw: 65535, chan16_raw: 65535,
       chan17_raw: 65535, chan18_raw: 65535,
@@ -434,6 +441,45 @@ export class MavlinkManualControlManager {
       target_component: 1,
     }
     sendMavlinkMessage(rcMsg)
+  }
+
+  /**
+   * Read the RC channel-to-axis mapping from localStorage.
+   * @returns {{ axes: number[], reversed: boolean[], expo?: number[] }}
+   */
+  private getRcChannelMapping(): { axes: number[], reversed: boolean[], expo?: number[] } {
+    try {
+      const raw = localStorage.getItem('cockpit-rc-channel-axis-mapping')
+      if (raw) {
+        const p = JSON.parse(raw)
+        return {
+          axes: p?.axes?.slice(0, 8) ?? [0, 1, 2, 3],
+          reversed: p?.reversed?.slice(0, 8) ?? [false, false, false, false],
+          expo: p?.expo?.slice(0, 8),
+        }
+      }
+    } catch { /* fall through */ }
+    return { axes: [0, 1, 2, 3], reversed: [false, false, false, false] }
+  }
+
+  /**
+   * Send zero-value RC_CHANNELS_OVERRIDE bursts to clear all overrides
+   * (like MissionPlanner's clearRCOverride).
+   */
+  sendClearOverride(): void {
+    const clearMsg: Message.RcChannelsOverride = {
+      type: MAVLinkType.RC_CHANNELS_OVERRIDE,
+      chan1_raw: 0, chan2_raw: 0, chan3_raw: 0, chan4_raw: 0,
+      chan5_raw: 0, chan6_raw: 0, chan7_raw: 0, chan8_raw: 0,
+      chan9_raw: 0, chan10_raw: 0, chan11_raw: 0, chan12_raw: 0,
+      chan13_raw: 0, chan14_raw: 0, chan15_raw: 0, chan16_raw: 0,
+      chan17_raw: 0, chan18_raw: 0,
+      target_system: this.vehicle?.systemId ?? 1,
+      target_component: 1,
+    }
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => sendMavlinkMessage(clearMsg), i * 25)
+    }
   }
 
   private sendManualControlMessage(state: MavlinkManualControlState, targetId: number): void {

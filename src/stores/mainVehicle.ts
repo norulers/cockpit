@@ -972,13 +972,22 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
   // Loop to send MAVLink RC_CHANNELS_OVERRIDE messages (like MissionPlanner).
   // When direct RC control (Electron + UDP) is active, JoystickCommIndicator handles
   // RC_CHANNELS_OVERRIDE via a dedicated UDP socket, so we skip this path to avoid conflicts.
+  let wasForwarding = false
   setInterval(() => {
     // Set the manager vehicle instance if yet undefined
     if (mainVehicle.value && mavlinkManualControlManager.vehicle === undefined) {
       mavlinkManualControlManager.setVehicle(mainVehicle.value as ArduPilot)
     }
 
-    if (!controllerStore.enableForwarding) return
+    if (!controllerStore.enableForwarding) {
+      // On disable, send clear override bursts (like MissionPlanner's clearRCOverride)
+      if (wasForwarding) {
+        mavlinkManualControlManager.sendClearOverride()
+        wasForwarding = false
+      }
+      return
+    }
+    wasForwarding = true
 
     const directRcEnabled = localStorage.getItem('cockpit-rc-direct-control-enabled') === 'true'
     if (directRcEnabled) return

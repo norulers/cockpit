@@ -218,6 +218,7 @@ import {
   toRefs,
   watch,
 } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
 import copterMarkerImage from '@/assets/arducopter-top-view.avif'
@@ -233,7 +234,6 @@ import MissionChecklist from '@/components/MissionChecklist.vue'
 import PoiActionPopup from '@/components/poi/PoiActionPopup.vue'
 import PoiManager from '@/components/poi/PoiManager.vue'
 import PoiMapArrows from '@/components/poi/PoiMapArrows.vue'
-import { useI18n } from 'vue-i18n'
 import { useInteractionDialog } from '@/composables/interactionDialog'
 import { provideMapContext } from '@/composables/map/useMapContext'
 import { useMapOverlays } from '@/composables/map/useMapOverlays'
@@ -1038,7 +1038,7 @@ const checkIfMissionChanged = async (): Promise<void> => {
       missionStore.bumpVehicleMissionRevision(downloadedMission)
 
       openSnackbar({
-        message: 'Mission changed on the vehicle. Using vehicle mission.',
+        message: t('Mission changed on the vehicle. Using vehicle mission.'),
         variant: 'info',
         duration: 2500,
       })
@@ -1256,6 +1256,11 @@ watch([vehiclePosition, vehicleHeading, timeAgoSeenText, () => vehicleStore.isAr
   }
 })
 
+const homeWasCommandedByUser = computed(() => {
+  const commanded = missionStore.userCommandedHomePosition
+  return commanded !== undefined && home.value?.[0] === commanded[0] && home.value?.[1] === commanded[1]
+})
+
 // Create marker for the home position
 const homeMarker = shallowRef<L.Marker>()
 watch(home, () => {
@@ -1279,6 +1284,17 @@ watch(home, () => {
     homeMarker.value.bindTooltip(homeMarkerTooltip)
     homeMarker.value.on('dragend', (e: L.DragEndEvent) => {
       const marker = e.target as L.Marker
+      // A home drawn from a mission is just a rendering of that mission, so dragging it must not command the vehicle.
+      // Snapping back keeps the marker honest, as nothing anywhere would hold the dragged-to position.
+      if (!homeWasCommandedByUser.value) {
+        if (home.value) marker.setLatLng(home.value as LatLngTuple)
+        openSnackbar({
+          message: t('This home point comes from the mission. Use "Set home waypoint" on the map menu to move it.'),
+          variant: 'info',
+          duration: 5000,
+        })
+        return
+      }
       const latlng = marker.getLatLng()
       setHomePosition([latlng.lat, latlng.lng])
     })
@@ -1722,8 +1738,9 @@ const drawMission = (missionItems: Waypoint[]): void => {
   const drawn: Waypoint[] = []
   missionItems.forEach((wp, idx) => {
     if (idx === 0) {
+      // Only moves the marker. Echoing this back as a set-home command would overwrite the vehicle's home with a
+      // possibly stale one, as missions are restored from persistent storage on startup.
       home.value = wp.coordinates
-      setHomePosition(wp.coordinates)
     } else {
       drawn.push(wp)
     }
@@ -1777,8 +1794,10 @@ const downloadMissionFromVehicle = async (): Promise<void> => {
 }
 
 const setHomePosition = async (homePosition: [number, number]): Promise<void> => {
+  logUserAction('Set the home position from the map')
   const newHome: [number, number] = [homePosition[0], homePosition[1]]
   home.value = newHome
+  missionStore.userCommandedHomePosition = newHome
 
   await vehicleStore.setHomeWaypoint(newHome, 0)
   if (contextMenuVisible.value) {
@@ -1792,7 +1811,7 @@ const executeMissionOnVehicle = async (): Promise<void> => {
   try {
     await vehicleStore.startMission()
   } catch (error) {
-    openSnackbar({ message: 'Failed to start mission.', variant: 'error' })
+    openSnackbar({ message: t('Failed to start mission.'), variant: 'error' })
   }
   return
 }

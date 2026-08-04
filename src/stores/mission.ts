@@ -3,6 +3,7 @@ import { useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { v4 as uuid } from 'uuid'
 import { computed, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { defaultMapFallbackBaseColor, defaultMapFallbackNoiseIntensity } from '@/assets/defaults'
 import { useInteractionDialog } from '@/composables/interactionDialog'
@@ -104,6 +105,9 @@ export const useMissionStore = defineStore('mission', () => {
   const mapClearRequestRevision = ref(0)
   const mapDownloadRequestRevision = ref(0)
   const homeMarkerPosition = ref<WaypointCoordinates | undefined>(undefined)
+  // Home position the user last commanded. Compared against homeMarkerPosition to tell a home the user placed apart
+  // from one that merely came from a mission, so any other writer invalidates it without having to know about this.
+  const userCommandedHomePosition = ref<WaypointCoordinates | undefined>(undefined)
   // Request for any active map to center on given coordinates. Replaced (new object) on each request.
   const mapCenterOnRequest = ref<{
     /** Coordinates the map should center on */
@@ -121,6 +125,7 @@ export const useMissionStore = defineStore('mission', () => {
   const { urlFor: thumbnailUrlFor, setThumbnail, removeThumbnail } = useMissionThumbnails()
 
   const { showDialog } = useInteractionDialog()
+  const { t } = useI18n()
 
   const mainVehicleStore = useMainVehicleStore()
 
@@ -367,8 +372,8 @@ export const useMissionStore = defineStore('mission', () => {
     // If the user cancels the prompt or sets a name with less than 3 chars, do nothing
     if (!newUsername || newUsername.trim().length < 3) {
       showDialog({
-        title: 'Invalid username',
-        message: 'Username must be at least 3 characters long. No username was set. Auto-sync disabled.',
+        title: t('Invalid username'),
+        message: t('Username must be at least 3 characters long. No username was set. Auto-sync disabled.'),
         variant: 'error',
         maxWidth: 560,
       })
@@ -888,6 +893,7 @@ export const useMissionStore = defineStore('mission', () => {
     canRedo,
     clearUndoStack,
     homeMarkerPosition,
+    userCommandedHomePosition,
     plannedVehicleType,
     customVehicleIcon,
     effectiveVehicleType,

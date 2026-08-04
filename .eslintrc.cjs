@@ -122,5 +122,11 @@ module.exports = {
         'max-len': ['off'],
       },
     },
+    {
+      files: ['*.json'],
+      rules: {
+        'max-len': ['off'],
+      },
+    },
   ],
 }

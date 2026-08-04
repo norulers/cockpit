@@ -125,14 +125,14 @@ function selectedJoystick(): Joystick | undefined {
 
 const axisOptions = computed(() => [
   { title: t('None'), value: -1 },
-  { title: 'A0 (Left Y)', value: 0 },
-  { title: 'A1 (Left X)', value: 1 },
-  { title: 'A2 (Right Y)', value: 2 },
-  { title: 'A3 (Right X)', value: 3 },
-  { title: 'A4', value: 4 },
-  { title: 'A5', value: 5 },
-  { title: 'A6', value: 6 },
-  { title: 'A7', value: 7 },
+  { title: t('A0 (Left Y)'), value: 0 },
+  { title: t('A1 (Left X)'), value: 1 },
+  { title: t('A2 (Right Y)'), value: 2 },
+  { title: t('A3 (Right X)'), value: 3 },
+  { title: t('A4'), value: 4 },
+  { title: t('A5'), value: 5 },
+  { title: t('A6'), value: 6 },
+  { title: t('A7'), value: 7 },
 ])
 
 const CHANNEL_NAMES = ['RC1', 'RC2', 'RC3', 'RC4', 'RC5', 'RC6', 'RC7', 'RC8']
@@ -178,7 +178,7 @@ const channels = reactive<ChannelRow[]>(
     func: CHANNEL_FUNCS[i],
     axis: persistedMapping.value.axes[i] ?? -1,
     reversed: persistedMapping.value.reversed[i] ?? false,
-    pwmText: '\\u2014',
+    pwmText: '\u2014',
     barWidth: 0,
   }))
 )

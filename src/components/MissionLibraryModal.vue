@@ -61,11 +61,15 @@
                   </div>
                   <div class="absolute top-1 right-1 flex flex-col gap-1">
                     <div class="card-action-button" @click.stop="onLoadClick(mission)">
-                      <v-tooltip activator="parent" location="left" open-delay="500">{{ $t('Place mission on map') }}</v-tooltip>
+                      <v-tooltip activator="parent" location="left" open-delay="500">{{
+                        $t('Place mission on map')
+                      }}</v-tooltip>
                       <v-icon size="16" class="text-white">mdi-map-plus</v-icon>
                     </div>
                     <div class="card-action-button" @click.stop="onDeleteClick(mission)">
-                      <v-tooltip activator="parent" location="left" open-delay="500">{{ $t('Delete mission') }}</v-tooltip>
+                      <v-tooltip activator="parent" location="left" open-delay="500">{{
+                        $t('Delete mission')
+                      }}</v-tooltip>
                       <v-icon size="16" class="text-white">mdi-delete</v-icon>
                     </div>
                   </div>
@@ -230,7 +234,9 @@
                   rel="noopener"
                   class="text-blue-300 hover:text-blue-200 inline-flex mr-2"
                 >
-                  <v-tooltip activator="parent" location="top" open-delay="500">{{ $t('Open in Google Earth') }}</v-tooltip>
+                  <v-tooltip activator="parent" location="top" open-delay="500">{{
+                    $t('Open in Google Earth')
+                  }}</v-tooltip>
                   <v-icon size="18">mdi-google-earth</v-icon>
                 </a>
                 <span>{{ detailLocation[0]?.toFixed(6) ?? '—' }}, {{ detailLocation[1]?.toFixed(6) ?? '—' }}</span>
@@ -295,7 +301,9 @@
               />
             </div>
             <div class="flex flex-col gap-y-1">
-              <label for="save-mission-description" class="text-sm text-white/80">{{ $t('Description (optional)') }}</label>
+              <label for="save-mission-description" class="text-sm text-white/80">{{
+                $t('Description (optional)')
+              }}</label>
               <textarea
                 id="save-mission-description"
                 v-model="saveForm.description"
@@ -320,7 +328,6 @@
 import { format } from 'date-fns'
 import { saveAs } from 'file-saver'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-
 import { useI18n } from 'vue-i18n'
 
 import { useInteractionDialog } from '@/composables/interactionDialog'

@@ -1,7 +1,11 @@
 <template>
   <div class="flex flex-col gap-3 px-2 py-3">
     <p class="text-sm text-slate-100/70">
-      {{ $t('Captures every MAVLink message exchanged with the main connection (both incoming and outgoing) into an in-memory buffer. Use it to inspect the raw stream when debugging issues like multi-instance messages or missing values.') }}
+      {{
+        $t(
+          'Captures every MAVLink message exchanged with the main connection (both incoming and outgoing) into an in-memory buffer. Use it to inspect the raw stream when debugging issues like multi-instance messages or missing values.'
+        )
+      }}
     </p>
     <div class="flex flex-wrap items-center gap-3">
       <v-btn
@@ -67,7 +71,9 @@
         <span class="mavlink-dumper-stat-value">{{ formatMavlinkDumperSize(mavlinkDumperDumpSizeBytes) }}</span>
       </span>
       <span v-if="mavlinkDumperStartedAt !== null" class="mavlink-dumper-stat">
-        <span class="mavlink-dumper-stat-label">{{ isMavlinkDumperRecording ? t('Recording for:') : t('Captured:') }}</span>
+        <span class="mavlink-dumper-stat-label">{{
+          isMavlinkDumperRecording ? t('Recording for:') : t('Captured:')
+        }}</span>
         <span class="mavlink-dumper-stat-value">{{ formatDumpDuration(elapsedMavlinkDumperRecordingMs) }}</span>
       </span>
     </div>

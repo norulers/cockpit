@@ -11,7 +11,11 @@
           >
             <v-icon icon="mdi-information-outline" size="16" class="mt-[2px]" />
             <span>
-              {{ $t('In Cockpit Lite, overlays are stored in limited browser storage that the browser may clear, so very large surveys may fail to save or not persist. For large datasets or reliable storage, use Cockpit Standalone.') }}
+              {{
+                $t(
+                  'In Cockpit Lite, overlays are stored in limited browser storage that the browser may clear, so very large surveys may fail to save or not persist. For large datasets or reliable storage, use Cockpit Standalone.'
+                )
+              }}
             </span>
           </div>
 

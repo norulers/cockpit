@@ -177,17 +177,8 @@
             @update:model-value="onPlannedVehicleTypeChange"
           />
         </div>
-        <div
-          v-if="!isCreatingSurvey && !isCreatingSimplePath"
-          class="mx-4 mt-2"
-        >
-          <input
-            ref="iconFileInput"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            @change="onCustomIconSelected"
-          />
+        <div v-if="!isCreatingSurvey && !isCreatingSimplePath" class="mx-4 mt-2">
+          <input ref="iconFileInput" type="file" accept="image/*" class="hidden" @change="onCustomIconSelected" />
           <v-btn
             size="x-small"
             variant="outlined"
@@ -256,7 +247,9 @@
                 <v-icon v-bind="props" class="ml-4 text-slate-400 text-sm cursor-help">mdi-information-outline</v-icon>
               </template>
               <div class="text-sm pa-1">
-                <p class="mb-1 text-center"><strong>{{ $t('Tested BlueBoat speeds:') }}</strong></p>
+                <p class="mb-1 text-center">
+                  <strong>{{ $t('Tested BlueBoat speeds:') }}</strong>
+                </p>
                 <p class="mb-[3px]">{{ $t('Safe: 1 to 1.5 m/s') }}</p>
                 <p class="mb-[3px]">{{ $t('Average: 2 m/s') }}</p>
                 <p>{{ $t('Max: 3 m/s (heavily depends on wind, waves and stream).') }}</p>
@@ -699,9 +692,9 @@ import { v4 as uuid } from 'uuid'
 import { type InstanceType, computed, nextTick, onMounted, onUnmounted, ref, shallowRef, toRaw, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import copterMarkerImage from '@/assets/arducopter-top-view.avif'
 import blueboatMarkerImage from '@/assets/blueboat-marker.avif'
 import brov2MarkerImage from '@/assets/brov2-marker.avif'
-import copterMarkerImage from '@/assets/arducopter-top-view.avif'
 import genericVehicleMarkerImage from '@/assets/generic-vehicle-marker.avif'
 import MapNorthIndicator from '@/components/map/MapNorthIndicator.vue'
 import MapOverlaysDialog from '@/components/map/MapOverlaysDialog.vue'
@@ -724,6 +717,7 @@ import { useMapOverlays } from '@/composables/map/useMapOverlays'
 import { useMapPoiMarkers } from '@/composables/map/useMapPoiMarkers'
 import { useMapTileLayers } from '@/composables/map/useMapTileLayers'
 import { useMapTileLayerSelection } from '@/composables/map/useMapTileLayerSelection'
+import { type SurveyPreview, useSurveyArrowOverlay } from '@/composables/map/useSurveyArrowOverlay'
 import { useVertexAngleOverlay } from '@/composables/map/useVertexAngleOverlay'
 import { useSnackbar } from '@/composables/snackbar'
 import {
@@ -737,9 +731,11 @@ import { MavType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
 import { MavCmd } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
 import type { NoiseTileOptions } from '@/libs/map/map-tile-fallback'
 import { attachTileNoiseFallback, refreshNoiseFallbackTiles } from '@/libs/map/map-tile-fallback'
+import { applyLiveWaypointCoordinates } from '@/libs/map/survey-arrows'
 import {
   createGridOverlay,
   fitMapToWaypoints,
+  persistLiveMapView,
   singleStepZoomMapOptions,
   TargetFollower,
   WhoToFollow,
@@ -753,7 +749,7 @@ import {
   polygonAreaSquareMeters,
 } from '@/libs/mission/general-estimates'
 import { PLANNABLE_VEHICLE_TYPES, vehicleTypeLabel } from '@/libs/mission/library'
-import { degrees } from '@/libs/utils'
+import { degrees, messageFromError } from '@/libs/utils'
 import router from '@/router'
 import { SubMenuComponentName, SubMenuName, useAppInterfaceStore } from '@/stores/appInterface'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
@@ -788,6 +784,10 @@ const widgetStore = useWidgetManagerStore()
 const missionEstimates = useMissionEstimates()
 const angleOverlay = useVertexAngleOverlay()
 const dragMeasureOverlay = useDragMeasureOverlay(angleOverlay)
+const surveyArrowOverlay = useSurveyArrowOverlay({
+  surveys: () => surveysWithLiveWaypoints.value,
+  previewPath: () => surveyPreviewPath.value,
+})
 
 const { height: windowHeight } = useWindowSize()
 
@@ -912,8 +912,9 @@ const uploadMissionToVehicle = async (): Promise<void> => {
             missionStore.alwaysSwitchToFlightMode = true
             openSnackbar({
               variant: 'info',
-              message:
-                t('You will be switched to Flight Mode automatically in the future. To change this, go to Mission Planning settings.'),
+              message: t(
+                'You will be switched to Flight Mode automatically in the future. To change this, go to Mission Planning settings.'
+              ),
               duration: 5000,
             })
             router.push('/')
@@ -929,7 +930,7 @@ const uploadMissionToVehicle = async (): Promise<void> => {
     showDialog({
       variant: 'error',
       title: t('Mission upload failed'),
-      message: error as string,
+      message: messageFromError(error),
       timer: 3000,
       persistent: false,
     })
@@ -967,7 +968,7 @@ const downloadMissionFromVehicle = async (): Promise<void> => {
 
     openSnackbar({ variant: 'success', message: t('Mission download succeeded!'), duration: 3000 })
   } catch (error) {
-    showDialog({ variant: 'error', title: t('Mission download failed'), message: error as string, timer: 5000 })
+    showDialog({ variant: 'error', title: t('Mission download failed'), message: messageFromError(error), timer: 5000 })
   } finally {
     loading.value = false
     fetchingMission.value = false
@@ -1032,6 +1033,10 @@ const selectedSurveyId = ref<string>('')
 const surveyPolygonLayers = ref<{ [key: string]: Polygon }>({})
 const lastSelectedSurveyId = ref('')
 const surveys = computed(() => missionStore.currentPlanningSurveys)
+
+const surveysWithLiveWaypoints = computed<Survey[]>(() =>
+  applyLiveWaypointCoordinates(surveys.value, missionStore.currentPlanningWaypoints)
+)
 const undoIsInProgress = ref(false)
 const undoWaypointInsertIndex = ref<number | null>(null)
 const undoSurveyInsertIndex = ref<number | null>(null)
@@ -2901,6 +2906,7 @@ const surveyPathLayer = shallowRef<L.Polyline | null>(null)
 const surveyCrosshatchPathLayer = shallowRef<L.Polyline | null>(null)
 const surveyTurnaroundLayers = shallowRef<L.Polyline[]>([])
 const surveyPolygonLayer = shallowRef<L.Polygon | null>(null)
+const surveyPreviewPath = shallowRef<SurveyPreview | null>(null)
 
 const removeSurveyCrosshatchPathLayer = (): void => {
   if (surveyCrosshatchPathLayer.value) {
@@ -2915,6 +2921,7 @@ const clearSurveyPathByUser = (): void => {
 }
 
 const clearSurveyPath = (): void => {
+  surveyPreviewPath.value = null
   if (surveyPathLayer.value) {
     planningMap.value?.removeLayer(surveyPathLayer.value as unknown as L.Layer)
     surveyPathLayer.value = null
@@ -3013,6 +3020,7 @@ const updatePolygon = (): void => {
 
 const checkAndRemoveSurveyPath = (): void => {
   if (surveyPolygonVertexesPositions.value.length >= 4 || !surveyPathLayer.value) return
+  surveyPreviewPath.value = null
   planningMap.value?.removeLayer(surveyPathLayer.value as unknown as L.Layer)
   surveyPathLayer.value = null
   removeSurveyCrosshatchPathLayer()
@@ -3037,6 +3045,7 @@ const createSurveyPath = (): void => {
     )
 
     if (result.path.length === 0) {
+      surveyPreviewPath.value = null
       showDialog({
         variant: 'error',
         message: t('No valid path could be generated. Try adjusting the angle or distance between lines.'),
@@ -3055,6 +3064,13 @@ const createSurveyPath = (): void => {
 
     const crosshatchStart = result.crosshatchStartIndex
     const firstPassPath = crosshatchStart !== undefined ? result.path.slice(0, crosshatchStart) : result.path
+    // Include the last point of the first pass so the transit leg into the second pass is drawn.
+    const crosshatchPath = crosshatchStart !== undefined ? result.path.slice(Math.max(0, crosshatchStart - 1)) : []
+
+    surveyPreviewPath.value = {
+      firstPass: firstPassPath.map((point) => [point.lat, point.lng]),
+      crosshatch: crosshatchPath.map((point) => [point.lat, point.lng]),
+    }
 
     surveyPathLayer.value = L.polyline(firstPassPath, {
       color: '#2563EB',
@@ -3064,11 +3080,10 @@ const createSurveyPath = (): void => {
     }).addTo(toRaw(planningMap.value)!)
 
     if (crosshatchStart !== undefined) {
-      // Include the last point of the first pass so the transit leg into the second pass is drawn.
-      surveyCrosshatchPathLayer.value = L.polyline(result.path.slice(Math.max(0, crosshatchStart - 1)), {
+      surveyCrosshatchPathLayer.value = L.polyline(crosshatchPath, {
         color: '#A855F7',
-        weight: 1,
-        opacity: 0.56,
+        weight: 1.5,
+        opacity: 0.8,
         className: 'survey-path-crosshatch',
       }).addTo(toRaw(planningMap.value)!)
     }
@@ -3084,6 +3099,7 @@ const createSurveyPath = (): void => {
       )
     }
   } catch (error) {
+    surveyPreviewPath.value = null
     showDialog({
       variant: 'error',
       message: `Failed to generate survey path: ${(error as Error).message}`,
@@ -4000,7 +4016,11 @@ let fallbackLayers: L.TileLayer[] = []
 
 onMounted(async () => {
   // Build the shared base maps, overlays and extra OSM overlay (tile-provider definitions live in useMapTileLayers)
-  const tileLayers = useMapTileLayers({ extraOsm: missionStore.showExtraOsmOnMissionPlanning, seamarks: true, marineProfile: true })
+  const tileLayers = useMapTileLayers({
+    extraOsm: missionStore.showExtraOsmOnMissionPlanning,
+    seamarks: true,
+    marineProfile: true,
+  })
   const { osm, esri, extraOsm } = tileLayers
 
   // Restore and persist the user's base-map and overlay selection
@@ -4018,8 +4038,12 @@ onMounted(async () => {
   if (missionStore.showExtraOsmOnMissionPlanning) extraOsm?.addTo(planningMap.value)
   planningMap.value.zoomControl.setPosition('bottomright')
   // Translate Leaflet default zoom button titles
-  const zoomInBtn = planningMap.value.zoomControl.getContainer()?.querySelector('.leaflet-control-zoom-in') as HTMLElement
-  const zoomOutBtn = planningMap.value.zoomControl.getContainer()?.querySelector('.leaflet-control-zoom-out') as HTMLElement
+  const zoomInBtn = planningMap.value.zoomControl
+    .getContainer()
+    ?.querySelector('.leaflet-control-zoom-in') as HTMLElement
+  const zoomOutBtn = planningMap.value.zoomControl
+    .getContainer()
+    ?.querySelector('.leaflet-control-zoom-out') as HTMLElement
   if (zoomInBtn) zoomInBtn.title = t('Zoom in')
   if (zoomOutBtn) zoomOutBtn.title = t('Zoom out')
 
@@ -4044,6 +4068,7 @@ onMounted(async () => {
   pane.style.zIndex = '640'
   pane.style.pointerEvents = 'none'
   angleOverlay.initAngleOverlay(planningMap.value!)
+  surveyArrowOverlay.initArrowOverlay(planningMap.value!)
   dragMeasureOverlay.initDragMeasureOverlay(planningMap.value!)
   measureLayer.value = L.layerGroup().addTo(planningMap.value!) as L.LayerGroup
 
@@ -4169,6 +4194,9 @@ watch(
 )
 
 onUnmounted(() => {
+  // Debounced saves may still be pending; write the live view now so Flight Mode mounts with it.
+  persistLiveMapView(missionStore.saveLastMapPosition, planningMap.value, zoom.value, mapCenter.value)
+
   targetFollower.disableAutoUpdate()
   stopUnFollowOnUserDrag?.()
   if (planningMap.value) {
@@ -4184,6 +4212,7 @@ onUnmounted(() => {
   clearLiveMeasure()
   dragMeasureOverlay.destroyDragMeasureOverlay()
   angleOverlay.destroyAngleOverlay()
+  surveyArrowOverlay.destroyArrowOverlay()
 
   detachTileFallbacks.forEach((detach) => detach())
   detachTileFallbacks = []
@@ -4494,7 +4523,11 @@ const openPoiDialog = (): void => {
     logUserAction('Opened point of interest dialog')
     poiManagerRef.value.openDialog(cursorCoordinates.value)
   } else if (!cursorCoordinates.value) {
-    showDialog({ variant: 'error', title: t('Error'), message: t('Cannot place Point of Interest without map coordinates.') })
+    showDialog({
+      variant: 'error',
+      title: t('Error'),
+      message: t('Cannot place Point of Interest without map coordinates.'),
+    })
     console.error('Cannot open POI dialog without click coordinates for new POI')
   } else if (!poiManagerRef.value) {
     showDialog({ variant: 'error', title: t('Error'), message: t('POI Manager is not available.') })
@@ -4660,6 +4693,10 @@ watch(
   pointer-events: none;
 }
 .measure-angle-tag {
+  background: transparent;
+  border: none;
+}
+.survey-arrow {
   background: transparent;
   border: none;
 }

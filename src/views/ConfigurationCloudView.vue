@@ -9,12 +9,18 @@
         <ExpansiblePanel no-top-divider no-bottom-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
           <template #title>{{ $t('BlueOS Cloud integration') }}</template>
           <template #subtitle>
-            <span v-if="cloudStore.isAuthenticated">{{ $t('Signed in as {name}', { name: cloudStore.displayName }) }}</span>
+            <span v-if="cloudStore.isAuthenticated">{{
+              $t('Signed in as {name}', { name: cloudStore.displayName })
+            }}</span>
             <span v-else>{{ $t('Not connected') }}</span>
           </template>
           <template #info>
             <p class="w-full">
-              {{ $t('Connect Cockpit to your BlueOS Cloud account to create missions and upload recorded videos directly from the app. After enabling the integration you will be guided through a quick login wizard.') }}
+              {{
+                $t(
+                  'Connect Cockpit to your BlueOS Cloud account to create missions and upload recorded videos directly from the app. After enabling the integration you will be guided through a quick login wizard.'
+                )
+              }}
             </p>
           </template>
           <template #content>

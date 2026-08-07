@@ -47,7 +47,9 @@ const baseConfig = {
       autoImport: true,
     }),
     // PWA is only for web/lite builds — Electron uses file:// protocol where SW caching is harmful
-    !isLibrary && !isElectron && !isBuilding &&
+    !isLibrary &&
+      !isElectron &&
+      !isBuilding &&
       VitePWA({
         registerType: 'autoUpdate',
         devOptions: {

@@ -17,7 +17,9 @@
         variant="text"
         icon
         :color="invertSearch ? 'white' : 'grey'"
-        :title="invertSearch ? $t('Excluding lines that match the filter') : $t('Including lines that match the filter')"
+        :title="
+          invertSearch ? $t('Excluding lines that match the filter') : $t('Including lines that match the filter')
+        "
         @click="invertSearch = !invertSearch"
       >
         <v-icon>{{ invertSearch ? 'mdi-filter-minus' : 'mdi-filter' }}</v-icon>

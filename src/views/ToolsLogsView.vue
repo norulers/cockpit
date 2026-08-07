@@ -87,7 +87,11 @@
             </div>
           </template>
           <template #info>
-            {{ $t('Raw data lake variables are recorded while Cockpit is running. Select which variables to record from the Data Lake table, then download session logs here in JSON or CSV format.') }}
+            {{
+              $t(
+                'Raw data lake variables are recorded while Cockpit is running. Select which variables to record from the Data Lake table, then download session logs here in JSON or CSV format.'
+              )
+            }}
           </template>
           <template #content>
             <div v-if="isLoading" class="flex justify-center items-center py-8">
@@ -173,19 +177,34 @@
               </template>
               <div class="text-caption">
                 <p class="font-weight-bold mb-1">{{ $t('Column labels') }}</p>
-                <p class="mb-1">{{ $t('How each variable\'s column is named in the exported files.') }}</p>
+                <p class="mb-1">{{ $t("How each variable's column is named in the exported files.") }}</p>
                 <ul class="pl-4 mb-2">
-                  <li><strong>{{ $t('Variable ID') }}</strong> — full data-lake path (e.g. /mavlink/1/1/ATTITUDE/roll).</li>
-                  <li><strong>{{ $t('Short variable ID') }}</strong> — only the last segment (e.g. roll).</li>
-                  <li><strong>{{ $t('Variable name') }}</strong> — human-readable name (e.g. Roll).</li>
+                  <li>
+                    <strong>{{ $t('Variable ID') }}</strong> — full data-lake path (e.g. /mavlink/1/1/ATTITUDE/roll).
+                  </li>
+                  <li>
+                    <strong>{{ $t('Short variable ID') }}</strong> — only the last segment (e.g. roll).
+                  </li>
+                  <li>
+                    <strong>{{ $t('Variable name') }}</strong> — human-readable name (e.g. Roll).
+                  </li>
                 </ul>
                 <p class="mb-2">
-                  {{ $t('If two variables would end up with the same label, both fall back to their full IDs so columns stay unique.') }}
+                  {{
+                    $t(
+                      'If two variables would end up with the same label, both fall back to their full IDs so columns stay unique.'
+                    )
+                  }}
                 </p>
                 <p class="font-weight-bold mb-1">{{ $t('Logging interval') }}</p>
                 <ul class="pl-4">
-                  <li><strong>{{ $t('Raw') }}</strong> — a row is recorded whenever any selected variable changes.</li>
-                  <li><strong>{{ $t('Fixed interval') }}</strong> — all selected variables are sampled every N milliseconds.</li>
+                  <li>
+                    <strong>{{ $t('Raw') }}</strong> — a row is recorded whenever any selected variable changes.
+                  </li>
+                  <li>
+                    <strong>{{ $t('Fixed interval') }}</strong> — all selected variables are sampled every N
+                    milliseconds.
+                  </li>
                 </ul>
               </div>
             </v-tooltip>

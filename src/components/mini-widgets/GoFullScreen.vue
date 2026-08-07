@@ -23,8 +23,12 @@ const isFullscreen = browserApi ? browserApi.isFullscreen : ref(false)
 
 onMounted(() => {
   if (!window.electronAPI) return
-  window.electronAPI.onFullscreenChanged?.((fs: boolean) => { isFullscreen.value = fs })
-  window.electronAPI.isFullscreen?.().then((fs: boolean) => { isFullscreen.value = fs })
+  window.electronAPI.onFullscreenChanged?.((fs: boolean) => {
+    isFullscreen.value = fs
+  })
+  window.electronAPI.isFullscreen?.().then((fs: boolean) => {
+    isFullscreen.value = fs
+  })
 })
 
 const fullScreenToggleIcon = computed(() => (isFullscreen.value ? 'fa-solid fa-compress' : 'fa-solid fa-expand'))

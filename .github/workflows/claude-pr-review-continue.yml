@@ -5,24 +5,58 @@ on:
     types: [created]
 
 concurrency:
-  group: claude-pr-rereview-${{ github.event.issue.number }}
+  # Keyed on the command as well as the PR: concurrency is evaluated before the job's `if:`, so the
+  # run for an ordinary comment still joins the group and, with cancel-in-progress, cancels a
+  # re-review already running.
+  group: claude-pr-rereview-${{ github.event.issue.number }}-${{ startsWith(github.event.comment.body, '/review') }}
   cancel-in-progress: true
 
 jobs:
-  rereview:
-    name: Claude PR Re-review
+  # Only run when: the comment is on a PR, starts with the `/review` command, is not from a bot,
+  # and the commenter can push here. The `if:` below is a cheap first pass that keeps the job from
+  # being scheduled for outsiders, but `author_association` only proves organization membership —
+  # an org member with read-only access to this repository still reports MEMBER. The permission
+  # lookup is the real decision, and it lives in its own job on purpose: the endpoint needs a
+  # token with push access, and the job that runs the model must not be given one. This job checks
+  # out nothing and runs a single read-only API call, so its wider token never touches PR content.
+  authorize:
+    name: Authorize
     runs-on: ubuntu-latest
-    # Only run when: the comment is on a PR, starts with the `/review` command,
-    # is not from a bot, and the commenter has write access
-    # (OWNER/MEMBER/COLLABORATOR). We intentionally do NOT allow the PR author by
-    # login alone, since an external fork author could otherwise spend Anthropic
-    # credits by repeatedly commenting `/review` on their own PR. A maintainer can
-    # trigger a re-review on a contributor's behalf.
     if: >
       github.event.issue.pull_request &&
       startsWith(github.event.comment.body, '/review') &&
       github.event.comment.user.type != 'Bot' &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    permissions:
+      contents: write
+    steps:
+      # Fails closed: anything other than a definite admin/write answer is a refusal.
+      - name: Require write access
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.event.comment.user.login }}
+        run: |
+          set -euo pipefail
+          # Assign, then override on failure: `$(... || echo unknown)` would append to whatever
+          # error body gh printed on stdout instead of replacing it.
+          level=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq '.permission' 2>/dev/null) || level='unknown'
+          echo "$ACTOR has '$level' permission on $REPO"
+          case "$level" in
+            admin | write) ;;
+            *)
+              echo "::error::/review requires write access to $REPO. $ACTOR has '$level'."
+              exit 1
+              ;;
+          esac
+
+  rereview:
+    name: Claude PR Re-review
+    needs: authorize
+    runs-on: ubuntu-latest
+    # We intentionally do NOT allow the PR author by login alone, since an external fork author
+    # could otherwise spend Anthropic credits by repeatedly commenting `/review` on their own PR.
+    # A maintainer can trigger a re-review on a contributor's behalf.
     permissions:
       contents: read
       pull-requests: write
@@ -132,7 +166,7 @@ jobs:
           system_prompt: |
             You are the automated code review agent for `bluerobotics/cockpit`, running inside a GitHub Actions workflow.
 
-            FIRST, read `.github/claude-review/review-guidelines.md` from the checked-out base ref. It defines your persona, the review sections (0 through 10), the section-collapsing rules, the tone, and the hard security constraints. Follow it exactly. Also read `AGENTS.md`, `.eslintrc.cjs`, and `package.json` to ground the review.
+            FIRST, read `.github/claude-review/review-guidelines.md` from the checked-out base ref. It defines your persona, the review sections (0 through 11), the section-collapsing rules, the tone, and the hard security constraints. Follow it exactly. Also read `AGENTS.md`, `.eslintrc.cjs`, and `package.json` to ground the review.
 
             Mode: RE-REVIEW, triggered by a `/review` comment. Your job is to report what changed since your previous review and re-check the still-open findings, then surface any new issues.
 
@@ -160,7 +194,7 @@ jobs:
             - A line stating the compared range, e.g. `Comparing \`$PREV_SHA\` → \`$HEAD_SHA\`` (or note that this is a full review because there was no previous one, or that a rebase/force-push prevented an incremental comparison).
             - A `### Previous findings status` section containing a markdown table with the header `| # | Finding | Severity | Status |` and one row per previous open finding, Status using the emoji shortcodes above. (Omit this section only when there was no previous review.)
             - When `new-comments.json` contains relevant discussion, a brief `### Discussion since last review` section summarizing the relevant comments and how they affected this review (author + short quote or link each). Omit this section entirely when there is no relevant discussion (do not write a placeholder).
-            - Then `### New findings` followed by the guideline sections 0 through 10 (collapsed where clean). The Section 0 Summary verdict is still required.
+            - Then `### New findings` followed by the guideline sections 0 through 11 (collapsed where clean). The Section 0 Summary verdict is still required.
             - The comment MUST end with the footer line: `_Generated by Claude. This is advisory; a human reviewer must still approve._`
 
             Posting:

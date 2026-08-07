@@ -10,9 +10,19 @@
           <template #title>{{ $t('Positioning') }}</template>
           <template #info>
             <div class="w-full">
-              <p>{{ $t('Read one or more external USB/serial GNSS receivers and inject their position and fix data into the data-lake, where it can drive live points of interest and widgets.') }}</p>
+              <p>
+                {{
+                  $t(
+                    'Read one or more external USB/serial GNSS receivers and inject their position and fix data into the data-lake, where it can drive live points of interest and widgets.'
+                  )
+                }}
+              </p>
               <p class="mt-2">
-                {{ $t('Message formats are detected automatically (standard NMEA 0183). Each device publishes variables under') }}
+                {{
+                  $t(
+                    'Message formats are detected automatically (standard NMEA 0183). Each device publishes variables under'
+                  )
+                }}
                 <span class="font-mono">external/positioning/gnss/&lt;id&gt;/*</span>.
               </p>
             </div>
@@ -25,7 +35,11 @@
                   <div>
                     <h4 class="text-amber-200 font-medium mb-2">{{ $t('Cockpit Lite') }}</h4>
                     <p class="text-amber-100 text-sm">
-                      {{ $t('Reading external serial GNSS receivers is only available in Cockpit Standalone. Browsers cannot access serial devices outside of a secure context, so this feature is disabled here.') }}
+                      {{
+                        $t(
+                          'Reading external serial GNSS receivers is only available in Cockpit Standalone. Browsers cannot access serial devices outside of a secure context, so this feature is disabled here.'
+                        )
+                      }}
                     </p>
                   </div>
                 </div>

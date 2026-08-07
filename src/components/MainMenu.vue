@@ -669,8 +669,12 @@ onBeforeUnmount(() => {
 
 onMounted(() => {
   if (window.electronAPI) {
-    window.electronAPI.onFullscreenChanged?.((fs: boolean) => { isFullscreen.value = fs })
-    window.electronAPI.isFullscreen?.().then((fs: boolean) => { isFullscreen.value = fs })
+    window.electronAPI.onFullscreenChanged?.((fs: boolean) => {
+      isFullscreen.value = fs
+    })
+    window.electronAPI.isFullscreen?.().then((fs: boolean) => {
+      isFullscreen.value = fs
+    })
   }
   if (scrollContainerRef.value) {
     scrollContainerRef.value.addEventListener('scroll', handleScroll)

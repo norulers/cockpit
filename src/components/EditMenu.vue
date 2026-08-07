@@ -453,9 +453,7 @@
               class="flex items-center justify-center w-full py-1 px-2 transition-all rounded-b-md text-white"
               :class="{ 'bg-[#135da3]': widget.isExternal, 'bg-[#3B7B62]': !widget.isExternal }"
             >
-              <span class="whitespace-normal text-center">{{
-                $t(widget.name)
-              }}</span>
+              <span class="whitespace-normal text-center">{{ $t(widget.name) }}</span>
             </div>
           </template>
           <div class="text-center">
@@ -553,8 +551,8 @@ import { useConfirmDialog } from '@vueuse/core'
 import { v4 as uuid } from 'uuid'
 import { computed, onMounted, ref, toRefs, watch } from 'vue'
 import { nextTick } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { type UseDraggableOptions, useDraggable, VueDraggable } from 'vue-draggable-plus'
+import { useI18n } from 'vue-i18n'
 
 import { defaultMiniWidgetManagerVars } from '@/assets/defaults'
 import AttitudeImg from '@/assets/widgets/Attitude.png'

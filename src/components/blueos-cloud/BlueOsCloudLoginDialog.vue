@@ -6,12 +6,18 @@
     @update:model-value="(value) => emit('update:modelValue', value)"
   >
     <v-card class="relative pa-4 text-white rounded-lg" :style="interfaceStore.globalGlassMenuStyles">
-      <v-card-title class="flex justify-center items-center text-lg font-medium">{{ $t('BlueOS Cloud login') }}</v-card-title>
+      <v-card-title class="flex justify-center items-center text-lg font-medium">{{
+        $t('BlueOS Cloud login')
+      }}</v-card-title>
       <v-btn icon="mdi-close" variant="text" size="small" class="absolute right-2 top-2" @click="closeDialog" />
       <v-card-text class="px-2 py-4">
         <div v-if="step === 'intro'" class="flex flex-col gap-3">
           <p class="text-sm leading-snug">
-            {{ $t('Connect Cockpit to your BlueOS Cloud account to create missions and upload recorded videos directly from this app.') }}
+            {{
+              $t(
+                'Connect Cockpit to your BlueOS Cloud account to create missions and upload recorded videos directly from this app.'
+              )
+            }}
           </p>
           <ol class="text-sm list-decimal list-inside opacity-90 space-y-1">
             <li>{{ $t('Click {startLogin} below.', { startLogin: $t('Start login') }) }}</li>

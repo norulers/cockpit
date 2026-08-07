@@ -33,7 +33,14 @@
               >
                 <v-icon>{{ isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen' }}</v-icon>
               </v-btn>
-              <v-btn icon size="30" variant="text" class="text-white cursor-pointer" :aria-label="$t('Close')" @click="close">
+              <v-btn
+                icon
+                size="30"
+                variant="text"
+                class="text-white cursor-pointer"
+                :aria-label="$t('Close')"
+                @click="close"
+              >
                 <v-icon>mdi-close</v-icon>
               </v-btn>
             </div>

@@ -467,11 +467,19 @@
           <template #title>{{ $t('Vehicle connection timeouts') }}</template>
           <template #info>
             <p class="w-full">
-              {{ $t('Heartbeat timeout: Time without heartbeats before Cockpit considers the vehicle offline. Increase this value when using high-latency or lossy links (e.g. cellular modems) where heartbeat packets may take longer than the default 5 seconds to arrive. Unrelated to the autopilot\'s GCS (heartbeat) failsafe.') }}
+              {{
+                $t(
+                  "Heartbeat timeout: Time without heartbeats before Cockpit considers the vehicle offline. Increase this value when using high-latency or lossy links (e.g. cellular modems) where heartbeat packets may take longer than the default 5 seconds to arrive. Unrelated to the autopilot's GCS (heartbeat) failsafe."
+                )
+              }}
             </p>
             <br />
             <p class="w-full">
-              {{ $t('Watchdog timeout: Time the MAVLink websocket may stay open without receiving any message before Cockpit forcibly recycles it and reconnects. This is the recovery threshold, not the offline indicator: setting it lower than the heartbeat timeout (above) means a brief link drop can be silently recovered before Cockpit ever flips to "vehicle offline". On high-latency links where short stalls are normal, raise this value so the socket is not torn down on every minor delivery delay.') }}
+              {{
+                $t(
+                  'Watchdog timeout: Time the MAVLink websocket may stay open without receiving any message before Cockpit forcibly recycles it and reconnects. This is the recovery threshold, not the offline indicator: setting it lower than the heartbeat timeout (above) means a brief link drop can be silently recovered before Cockpit ever flips to "vehicle offline". On high-latency links where short stalls are normal, raise this value so the socket is not torn down on every minor delivery delay.'
+                )
+              }}
             </p>
           </template>
           <template #content>
@@ -746,11 +754,7 @@ watch(
 const mainConnectionForm = ref()
 const mainConnectionFormValid = ref(false)
 const mavlink2RestWebsocketURI = ref(mainVehicleStore.MAVLink2RestWebsocketURI)
-const mavlink2RestUriExamples = [
-  'udpout:192.168.2.2:14550',
-  'udpin:0.0.0.0:14550',
-  'tcpsout:127.0.0.1:5760',
-]
+const mavlink2RestUriExamples = ['udpout:192.168.2.2:14550', 'udpin:0.0.0.0:14550', 'tcpsout:127.0.0.1:5760']
 
 const addNewVehicleConnection = async (conn: Connection.URI): Promise<void> => {
   mavlink2RestWebsocketURI.value = conn

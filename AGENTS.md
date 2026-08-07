@@ -58,6 +58,8 @@ The best code is the code never written. Understand the problem first — read t
 
 Prefer deletion over addition, boring over clever, and the shortest working diff that you fully understand. Question complex requests ("Do you actually need X, or does Y cover it?") instead of silently building them.
 
+**Do not write code for a future PR.** No helper, type, or exported function laid down as groundwork for the next branch. If a later PR needs it, it lands there, next to the call site that justifies it — nothing you add should be unused when the PR merges.
+
 **Fix the root cause, not the symptom.** A bug report names a symptom. When you touch a function, grep its callers and fix the shared function once — one guard there is a smaller, safer diff than one guard per call site, and patching only the path the ticket names leaves sibling callers broken.
 
 **Do not be lazy about:** understanding the problem, input validation at trust boundaries, error handling that prevents data loss, security, accessibility, and the calibration real hardware needs (clocks drift, sensors read off — the vehicle is never the spec ideal).
@@ -120,12 +122,15 @@ After running the lint and typecheck commands, check whether they auto-fixed (mo
 - When implementing new widgets, or adding/removing entries in the Options object of existing widgets, use the object merging approach (use `src/components/widgets/Plotter.vue` as a reference) to merge a default-options object with the persistent one. This ensures the new entries are added to existing widgets from the users persistence.
 - If a new Cockpit local-storage setting is being created or modified (be it directly using the settings-management.ts backend or the useBlueOsStorage composable), make sure it starts with `cockpit-` so its correctly tracked and parsed in our backend and UIs.
 
-## Settings migrations
+## Persistence and settings migrations
 
+- Choose the storage backend deliberately. `useBlueOsStorage` syncs the value to the vehicle, so every topside computer and every operator of that vehicle shares it. Machine-specific values — device and serial paths, local filesystem paths, window geometry — must stay machine-local, and must never be auto-acted on after a sync, since auto-connecting to a synced `/dev/ttyUSB0` can open the wrong device. Identify hardware by a stable id (USB VID/PID, device serial) rather than by path.
+- Avoid automatic user-data migrations. They are the riskiest thing we ship, so treat them as a last resort rather than the normal way to reshape a key.
+- Prefer the non-destructive route: introduce a new versioned key (e.g. `cockpit-foo-v2`) and read the old key only as a fallback, leaving the user's original data untouched. Do not reuse the old key with a new schema.
+- Write an automatic migration only when you fully understand the transformation, it is provably idempotent, and it cannot lose data. Once the new key has been written, re-running the migration on a later launch must never overwrite user data.
 - Migration logic for `cockpit-*` keys lives in `src/utils/migrations.ts` / `src/utils/widget-migrations.ts` (or a sibling under `src/utils/`), not inside Pinia stores. Stores call the migration helpers; they never embed the migration body.
-- When the shape of a persisted key changes, introduce a new versioned key (e.g. `cockpit-foo-v2`) and migrate from the old one — do not reuse the old key with a new schema.
-- Migrations must be idempotent: once the new key has been written, re-running the migration on a later launch must never overwrite user data.
 - Do not write migration code for keys that were never released to users. Just change the schema.
+- When a change to a default or to existing behavior leaves already-configured users on the old value, decide explicitly whether to carry them over or to leave them alone — and when you leave them, tell the user what changed.
 
 ## Plans
 
@@ -150,6 +155,7 @@ Business/domain logic must not live inside `.vue` components. Keep components li
 - Reactive orchestration (refs, computed, watchers, lifecycle) that wraps that logic → composables under `src/composables/`. Composables may import Vue; the pure logic they call should still live in `.ts` modules.
 - A `.vue` `<script>` should mostly call into `.ts`/composables, not implement the logic itself.
 - Exception: trivial glue (a one-line handler, simple template-only formatting) can stay in the component. Extract once it is non-trivial, reused, or worth testing on its own.
+- Do not pile new bulk onto a file that is already large. Once a file is past ~2000 lines, new logic goes into a child component, a composable, or free functions in `src/libs/` instead of another hundred lines on the end of it.
 
 ## Reuse before reinventing
 
@@ -158,6 +164,8 @@ Before writing a new helper, composable, or component, search for an existing on
 - Reactive logic: check `src/composables/` (e.g. `useDataLakeVariable`, `useInteractionDialog`, `useBlueOsStorage`).
 - UI: check existing components and dialogs for an established pattern before building a new one.
 If the same logic would live in two or more places, extract it once and reuse it.
+
+Then ask where it belongs, not just whether to extract it. Do not widen an existing module's purpose to host something unrelated — a bearing formatter is not a mission estimate, and a generic JSON serializer does not belong inside a specialized store. Put it in the module whose stated responsibility already covers it, or make a new one.
 
 ## Video and snapshot stream names
 
@@ -179,6 +187,11 @@ This applies to any pair of components/views with substantial overlap, not just 
 ## Commit hygiene
 
 - Each commit is one logical change. If a single fix touches three independent things, make three commits.
+- One logical change is also only one commit. Do not split it per file or per hunk — that makes the reviewer read the same change several times over.
+- Keep a commit reviewable in one sitting. Several hundred lines in a single commit is hard to follow even when it is nominally one thing, so look for the atomic steps inside it.
+- Never leave a commit that fixes or reimplements an earlier commit on the same branch; squash it into its target. The exception is a reviewer-requested architectural change late in a long PR, where rebasing everything costs more rework than it saves.
+- When stacking PRs, rebase away the commits replicated from the base PR once it merges, so each branch carries only its own history.
+- A fix or a modification to existing behavior gets its own commit, never a corner of the feature commit that happens to touch the same code — it has to be reviewable, revertable, and backportable on its own. The exception is a large refactor of that behavior, where the change genuinely belongs in the refactor commit.
 - When the user runs `git reset --soft <ref>` and asks you to recommit, group the working-tree changes back into the logical commits they described — do not pile everything into a single commit.
 - When fixing feedback for code that is already committed on the branch, prefer `git commit --fixup <sha>` over a new standalone "fix typo"/"address review" commit, unless the user says otherwise.
 - Fold `fixup!`/`squash!` commits into their targets with `git rebase --autosquash` BEFORE pushing (or before opening a PR / requesting review). Never leave a `fixup!`/`squash!` commit in pushed history — the branch should always be presented already squashed.
@@ -193,11 +206,17 @@ When a widget or mini-widget needs a vehicle telemetry value:
 - To expose a new MAVLink field, extend the flattener (`src/libs/vehicle/common/data-flattener.ts`) rather than special-casing the widget.
 - Vehicle stores are for app-level state (connection, vehicle identity, mode, etc.), not for per-telemetry-message values.
 
+## Heavy work and the main thread
+
+- Canvas work is synchronous and freezes the interface while it runs: `toDataURL`, `getImageData`/`putImageData`, large `drawImage` compositing, and per-pixel loops. Measure before assuming a capture or an overlay is cheap.
+- Make sure the encoder matches the extension you promise the user. Cockpit once wrote PNG data under a `.jpeg` name, costing ~800ms per workspace snapshot where the real thing takes ~80ms.
+- Be strictest with expensive work that runs on its own, from an interval, timer, watcher, or mount hook, rather than from a user action. The user cannot connect the stutter to anything they did, and cannot stop it.
+
 ## Logging user interactions
 
 - Any new feature with user interaction must log every interaction (e.g. user opened a menu, clicked button X, switched to tab Y, closed a dialog). Use the global `logUserAction(message)` helper (defined in `src/libs/cosmos.ts`), which prepends a `[UserAction]` tag and writes through the console logger captured by `src/libs/system-logging.ts`. Do not call `console.*` directly or use ad-hoc tracking.
 - `logUserAction` is assigned to the global scope at bootstrap (alongside `assert`/`unimplemented`), so call it without importing. ESLint knows it via the `globals` entry in `.eslintrc.cjs`.
-- The message describes what was done to which target; the `[UserAction]` tag already implies the actor, so do not start it with "User". The helper adds the tag, so do not include `[UserAction]` in the message yourself (e.g. `logUserAction('Opened the video settings menu')`, `logUserAction('Switched to the "Telemetry" tab')`).
+- The message describes, in the past tense, what was done to which target; the `[UserAction]` tag already implies the actor, so do not start it with "User". The helper adds the tag, so do not include `[UserAction]` in the message yourself (e.g. `logUserAction('Opened the video settings menu')`, `logUserAction('Switched to the "Telemetry" tab')`).
 - Prefer logging in the handler/method where the action is owned (the single funnel) rather than in the template, so every entry point that reaches it is covered once. For settings bound with `v-model`, log via an `@update:model-value` handler (not a `watch`) so BlueOS settings-sync writes are not logged as user actions.
 - Do not log on high-frequency, non-interaction paths (telemetry, render loops); this rule is about discrete user actions only.
 
@@ -208,6 +227,8 @@ When a widget or mini-widget needs a vehicle telemetry value:
 
 ## User feedback (snackbars and dialogs)
 
+- Every discrete user action needs visible feedback when it finishes or fails — a snackbar, an unambiguous UI state change, or a dialog. `logUserAction` does not count; it writes to a log the user never sees. Downloads, exports, and saves need this most, since Standalone has no browser-native download notification. The rare exception is when the resulting UI state change is itself unmistakable.
 - `openSnackbar` (`src/composables/snackbar.ts`) already writes to the logger. Do not pair it with a `console.log`/`warn`/`error` of the same message.
 - Do not open a new dialog while a dialog of the same purpose is already open. Guard against re-opens, especially inside timed loops (snapshots, retries, watchers).
 - For modal confirmations and from→to choices, reuse the existing `useInteractionDialog` composable (`src/composables/interactionDialog.ts`) and existing dialog patterns before creating a new component.
+- Keep protocol and implementation jargon (RTSP, WebRTC, MAVLink message names, internal ids) out of strings the user reads; where a term is unavoidable, still say what the user should do about it. Watch for unintended connotations — "upgrade to Standalone" reads as paid where "install" does not. When a setting shares a name with an autopilot concept, say how it differs, the way the heartbeat timeout has to state it is unrelated to ArduPilot's GCS failsafe.

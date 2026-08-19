@@ -136,6 +136,7 @@
               :key="menuitem.title"
               :label="simplifiedMainMenu ? undefined : $t(menuitem.title)"
               :label-class="menuLabelSize"
+              :tooltip="simplifiedMainMenu ? menuitem.title : undefined"
               :button-class="interfaceStore.isOnSmallScreen ? '-ml-[2px]' : ''"
               :icon="menuitem.icon"
               :selected="interfaceStore.currentSubMenuComponentName === menuitem.componentName"
@@ -157,6 +158,7 @@
               <v-divider width="70%" />
               <GlassButton
                 :label-class="menuLabelSize"
+                tooltip="Back"
                 icon="mdi-arrow-left"
                 :icon-class="interfaceStore.isOnSmallScreen ? '' : '-mb-[1px]'"
                 :button-class="interfaceStore.isOnSmallScreen ? (simplifiedMainMenu ? '-mt-1' : 'mt-1') : undefined"

@@ -9,6 +9,7 @@
   >
     <button
       :disabled="isDisabled"
+      :aria-label="label || tooltip"
       class="flex flex-col items-center justify-center mt-3 -mb-2"
       :class="[
         isUncontained ? 'no-glass' : 'frosted-button',
@@ -18,11 +19,9 @@
       ]"
       :style="{ width: buttonStyle.width.toString() + 'px', height: buttonStyle.height.toString() + 'px' }"
     >
-      <template v-if="tooltip">
-        <v-tooltip open-delay="600" activator="parent" location="top">
-          {{ tooltip }}
-        </v-tooltip>
-      </template>
+      <v-tooltip v-if="tooltip" activator="parent" :location="tooltipLocation ?? 'right'">
+        {{ tooltip }}
+      </v-tooltip>
       <template v-if="isRound || isUncontained">
         <slot v-if="$slots.default"></slot>
         <v-icon :size="props.iconSize || calculatedIconSize" :class="iconClass" class="opacity-90">
@@ -85,6 +84,10 @@ const props = defineProps<{
    * The tooltip text displayed on hover.
    */
   tooltip?: string
+  /**
+   * Where the tooltip opens relative to the button. Defaults to the right, which suits a button in a left-pinned column.
+   */
+  tooltipLocation?: 'top' | 'bottom' | 'start' | 'end' | 'left' | 'right'
   /**
    * Visual feedback for the button when toggled selected.
    */

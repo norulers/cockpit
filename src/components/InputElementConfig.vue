@@ -385,6 +385,7 @@ import { useI18n } from 'vue-i18n'
 
 import ExpansiblePanel from '@/components/ExpansiblePanel.vue'
 import { useSnackbar } from '@/composables/snackbar'
+import { useBarsAwarePanelStyle } from '@/composables/useBarsAwarePanelStyle'
 import {
   createDataLakeVariable,
   DataLakeVariable,
@@ -436,19 +437,7 @@ watch(
   }
 )
 
-const getMarginsFromBarsHeight = computed(() => {
-  return {
-    marginTop: widgetStore.editingMode ? '0px' : widgetStore.currentTopBarHeightPixels + 'px',
-    marginBottom: widgetStore.editingMode ? '0px' : widgetStore.currentBottomBarHeightPixels + 'px',
-    height: widgetStore.editingMode
-      ? window.innerHeight + 'px'
-      : window.innerHeight -
-        widgetStore.currentTopBarHeightPixels -
-        widgetStore.currentBottomBarHeightPixels -
-        1 +
-        'px',
-  }
-})
+const getMarginsFromBarsHeight = useBarsAwarePanelStyle()
 
 const handleResetVariable = (): void => {
   logUserAction('Reset data-lake variable on custom element')

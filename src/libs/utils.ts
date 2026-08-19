@@ -207,6 +207,20 @@ export const hostOsName = (): 'Linux' | 'Windows' | 'macOS' | undefined => {
 }
 
 /**
+ * Escape a string so it can be embedded in HTML markup without being parsed as markup, for the
+ * map tooltips and marker labels that are built as HTML strings out of operator-entered text.
+ * @param {string} value Text to escape
+ * @returns {string} The text with HTML-significant characters replaced by entities
+ */
+export const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+/**
  * Copy text to clipboard
  * @param {string} text The text to copy
  * @returns {Promise<void>} A promise that resolves when the text is copied
@@ -435,3 +449,29 @@ export const messageFromError = (error: unknown): string => {
  * @returns {T} A detached copy holding no proxies.
  */
 export const toPlain = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+
+/**
+ * Serialize a value into the text kept for it in a log.
+ * @param {unknown} value The value to be logged.
+ * @returns {string} The value's log representation, or an empty string when it cannot be serialized.
+ */
+export const serializeForLogging = (value: unknown): string => {
+  try {
+    // Errors are handled before the object branch because `JSON.stringify` renders one as `{}` — its name,
+    // message and stack are all non-enumerable — throwing away the only part worth logging.
+    if (value instanceof Error) return value.stack ?? `${value.name}: ${value.message}`
+    if (typeof value === 'object' && value !== null) {
+      try {
+        return JSON.stringify(value)
+      } catch {
+        // A value JSON cannot render (a circular object, most often) still deserves a placeholder, since
+        // dropping the argument leaves the entry with nothing but the message that introduced it.
+        return String(value)
+      }
+    }
+    // `String` rather than `.toString()`, which throws on the `null` and `undefined` that reach here.
+    return String(value)
+  } catch {
+    return ''
+  }
+}

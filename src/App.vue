@@ -100,6 +100,8 @@
   <VehicleDefaultsJoystickImportModal />
   <UpdateNotification v-if="isElectron()" />
   <ArchitectureWarning v-if="isElectron()" />
+  <BaseStationConfigPanel :is-mission-planning-context="route.name === 'Mission planning'" />
+  <BaseStationContextPopup />
   <SnackbarContainer />
   <FloatingWrapper v-model="devStore.showConsole" title="Console">
     <ConsoleViewer
@@ -124,9 +126,12 @@
 import { useStorage } from '@vueuse/core'
 import { computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { useLocale } from 'vuetify'
 
 import ArchitectureWarning from '@/components/ArchitectureWarning.vue'
+import BaseStationConfigPanel from '@/components/BaseStationConfigPanel.vue'
+import BaseStationContextPopup from '@/components/BaseStationContextPopup.vue'
 import CameraReplacementDialog from '@/components/CameraReplacementDialog.vue'
 import ConsoleViewer from '@/components/ConsoleViewer.vue'
 import DataPrivacyModal from '@/components/DataPrivacyModal.vue'
@@ -169,6 +174,7 @@ import { SubMenuComponent } from './types/general'
 const { openSnackbar } = useSnackbar()
 import { useSnapshotStore } from './stores/snapshot'
 
+const route = useRoute()
 const widgetStore = useWidgetManagerStore()
 const vehicleStore = useMainVehicleStore()
 const interfaceStore = useAppInterfaceStore()

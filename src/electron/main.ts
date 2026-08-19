@@ -10,6 +10,7 @@ import { setupJoystickMonitoring } from './services/joystick'
 import { linkService } from './services/link'
 import { setupMenuService } from './services/menu'
 import { setupNetworkService } from './services/network'
+import { setupOpenCellIdService } from './services/openCellId'
 import { setupOsmRefererService } from './services/osm-referer'
 import { setupResourceMonitoringService } from './services/resource-monitoring'
 import { setupFilesystemStorage } from './services/storage'
@@ -138,6 +139,7 @@ protocol.registerSchemesAsPrivileged([
 
 setupFilesystemStorage()
 setupNetworkService()
+setupOpenCellIdService()
 setupResourceMonitoringService()
 setupSystemInfoService()
 setupHardwareTelemetryService()

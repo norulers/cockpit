@@ -75,6 +75,7 @@ export const useMissionStore = defineStore('mission', () => {
   const showExtraOsmOnMissionPlanning = useBlueOsStorage('cockpit-show-extra-osm-on-mission-planning', false)
   const alwaysShowWaypointNumbers = useBlueOsStorage('cockpit-always-show-waypoint-numbers', false, { debounceMs: 0 })
   const showMissionEstimates = useBlueOsStorage('cockpit-show-mission-estimates', true)
+  const showMissionPathSignalStrength = useBlueOsStorage('cockpit-show-mission-path-signal-strength', false)
   const defaultCruiseSpeed = useBlueOsStorage<number>('cockpit-default-cruise-speed', 1)
   const cruiseSpeed = ref<number>(Number(defaultCruiseSpeed.value))
   const userLastMapTileProvider = useBlueOsStorage<MapTileProvider>(
@@ -835,6 +836,11 @@ export const useMissionStore = defineStore('mission', () => {
     logUserAction(`${alwaysShowWaypointNumbers.value ? 'Enabled' : 'Disabled'} always-visible waypoint numbers`)
   }
 
+  const setShowMissionPathSignalStrength = (value: boolean): void => {
+    showMissionPathSignalStrength.value = value
+    logUserAction(`${value ? 'Enabled' : 'Disabled'} mission-path comms coverage coloring`)
+  }
+
   return {
     username,
     lastConnectedUser,
@@ -877,6 +883,8 @@ export const useMissionStore = defineStore('mission', () => {
     alwaysShowWaypointNumbers,
     toggleAlwaysShowWaypointNumbers,
     showMissionEstimates,
+    showMissionPathSignalStrength,
+    setShowMissionPathSignalStrength,
     addCommandToWaypoint,
     removeCommandFromWaypoint,
     updateWaypointCommand,

@@ -3,6 +3,7 @@ import { useStorage } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { v4 as uuid } from 'uuid'
 import { computed, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { defaultMapFallbackBaseColor, defaultMapFallbackNoiseIntensity } from '@/assets/defaults'
 import { useInteractionDialog } from '@/composables/interactionDialog'
@@ -71,6 +72,7 @@ export const useMissionStore = defineStore('mission', () => {
   const showMissionCreationTips = useBlueOsStorage('cockpit-show-mission-creation-tips', true)
   const showChecklistBeforeArm = useBlueOsStorage('cockpit-show-checklist-before-arm', true)
   const showGridOnMissionPlanning = useBlueOsStorage('cockpit-show-grid-on-mission-planning', false)
+  const showExtraOsmOnMissionPlanning = useBlueOsStorage('cockpit-show-extra-osm-on-mission-planning', false)
   const alwaysShowWaypointNumbers = useBlueOsStorage('cockpit-always-show-waypoint-numbers', false, { debounceMs: 0 })
   const showMissionEstimates = useBlueOsStorage('cockpit-show-mission-estimates', true)
   const showMissionPathSignalStrength = useBlueOsStorage('cockpit-show-mission-path-signal-strength', false)
@@ -82,7 +84,7 @@ export const useMissionStore = defineStore('mission', () => {
   )
   const defaultMapTileProvider = useBlueOsStorage<MapTileProviderPreference>(
     'cockpit-default-map-tile-provider',
-    'Use last selected'
+    'Esri World Imagery'
   )
   const userLastMapShowSeamarks = useBlueOsStorage<boolean>('cockpit-user-last-map-show-seamarks', true)
   const userLastMapShowMarineProfile = useBlueOsStorage<boolean>('cockpit-user-last-map-show-marine-profile', false)
@@ -119,12 +121,14 @@ export const useMissionStore = defineStore('mission', () => {
 
   // Fallback vehicle type used by vehicle-specific planning features when no vehicle is connected.
   const plannedVehicleType = useBlueOsStorage<MavType | undefined>('cockpit-planned-vehicle-type', undefined)
+  const customVehicleIcon = useBlueOsStorage<string | undefined>('cockpit-custom-vehicle-icon', undefined)
   const savedMissions = useBlueOsStorage<SavedMission[]>('cockpit-mission-library', [])
   // Thumbnail bytes live local-first in IndexedDB and sync to the vehicle as real files, so adding many
   // entries never bloats the settings payload the way inlined base64 SVGs would.
   const { urlFor: thumbnailUrlFor, setThumbnail, removeThumbnail } = useMissionThumbnails()
 
   const { showDialog } = useInteractionDialog()
+  const { t } = useI18n()
 
   const mainVehicleStore = useMainVehicleStore()
 
@@ -371,8 +375,8 @@ export const useMissionStore = defineStore('mission', () => {
     // If the user cancels the prompt or sets a name with less than 3 chars, do nothing
     if (!newUsername || newUsername.trim().length < 3) {
       showDialog({
-        title: 'Invalid username',
-        message: 'Username must be at least 3 characters long. No username was set. Auto-sync disabled.',
+        title: t('Invalid username'),
+        message: t('Username must be at least 3 characters long. No username was set. Auto-sync disabled.'),
         variant: 'error',
         maxWidth: 560,
       })
@@ -875,6 +879,7 @@ export const useMissionStore = defineStore('mission', () => {
     showMissionCreationTips,
     showChecklistBeforeArm,
     showGridOnMissionPlanning,
+    showExtraOsmOnMissionPlanning,
     alwaysShowWaypointNumbers,
     toggleAlwaysShowWaypointNumbers,
     showMissionEstimates,
@@ -923,6 +928,7 @@ export const useMissionStore = defineStore('mission', () => {
     homeMarkerPosition,
     userCommandedHomePosition,
     plannedVehicleType,
+    customVehicleIcon,
     effectiveVehicleType,
     savedMissions,
     thumbnailUrlFor,

@@ -1,4 +1,5 @@
 import { type Ref, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useBlueOsStorage } from '@/composables/settingsSyncer'
 import { openSnackbar } from '@/composables/snackbar'
@@ -33,6 +34,7 @@ export const useVehicleDefaultsHandledFlag = (): Ref<boolean> =>
  * (user, vehicle) pair — no per-vehicle-type bookkeeping is needed.
  */
 export const useVehicleDefaultsAutoImport = (): void => {
+  const { t } = useI18n()
   const widgetStore = useWidgetManagerStore()
   const controllerStore = useControllerStore()
   const interfaceStore = useAppInterfaceStore()
@@ -51,7 +53,7 @@ export const useVehicleDefaultsAutoImport = (): void => {
       if (evaluation.views.action === 'auto-import' && evaluation.views.defaultProfile) {
         widgetStore.viewsGroup = buildFreshViewsGroupFromDefault(evaluation.views.defaultProfile)
         openSnackbar({
-          message: `Imported default views for ${evaluation.vehicleTypeName}.`,
+          message: t('Imported default views for {vehicleTypeName}.', { vehicleTypeName: evaluation.vehicleTypeName }),
           variant: 'success',
           duration: 5000,
         })
@@ -60,7 +62,9 @@ export const useVehicleDefaultsAutoImport = (): void => {
       if (evaluation.joystick.action === 'auto-import' && evaluation.joystick.defaultMapping) {
         controllerStore.protocolMapping = buildReplacementMapping(evaluation.joystick.defaultMapping)
         openSnackbar({
-          message: `Imported default joystick mapping for ${evaluation.vehicleTypeName}.`,
+          message: t('Imported default joystick mapping for {vehicleTypeName}.', {
+            vehicleTypeName: evaluation.vehicleTypeName,
+          }),
           variant: 'success',
           duration: 5000,
         })

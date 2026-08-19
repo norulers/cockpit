@@ -1,4 +1,4 @@
-import { app, BrowserWindow, powerSaveBlocker, protocol, screen, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, powerSaveBlocker, protocol, screen, shell } from 'electron'
 import { join } from 'path'
 
 import { setupAutoUpdater } from './services/auto-update'
@@ -8,6 +8,7 @@ import { setupGo2RTCService } from './services/go2rtc'
 import { setupHardwareTelemetryService } from './services/hardware-telemetry'
 import { setupJoystickMonitoring } from './services/joystick'
 import { linkService } from './services/link'
+import { setupMenuService } from './services/menu'
 import { setupNetworkService } from './services/network'
 import { setupOpenCellIdService } from './services/openCellId'
 import { setupOsmRefererService } from './services/osm-referer'
@@ -52,6 +53,7 @@ function createWindow(): void {
       backgroundThrottling: false,
       webSecurity: !process.env.VITE_DEV_SERVER_URL, // Disable CORS in dev mode so we don't have to deal with per-system workarounds
     },
+    fullscreen: true,
     autoHideMenuBar: true,
     width: store.get('windowBounds')?.width ?? screen.getPrimaryDisplay().workAreaSize.width,
     height: store.get('windowBounds')?.height ?? screen.getPrimaryDisplay().workAreaSize.height,
@@ -92,8 +94,16 @@ function createWindow(): void {
     event.preventDefault()
   })
 
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow?.webContents.send('fullscreen-changed', true)
+  })
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow?.webContents.send('fullscreen-changed', false)
+  })
+
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.setTitle(`Cockpit (${app.getVersion()})`)
+    mainWindow?.webContents.send('fullscreen-changed', mainWindow.isFullScreen())
   })
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -138,6 +148,7 @@ setupWorkspaceService()
 setupJoystickMonitoring()
 setupVideoRecordingService()
 setupGo2RTCService()
+setupMenuService()
 setupTTSService()
 
 app.whenReady().then(async () => {
@@ -151,11 +162,24 @@ app.whenReady().then(async () => {
   console.log('Creating window...')
   createWindow()
 
+  ipcMain.handle('toggle-fullscreen', () => {
+    if (mainWindow) {
+      mainWindow.setFullScreen(!mainWindow.isFullScreen())
+      return mainWindow.isFullScreen()
+    }
+    return false
+  })
+
+  ipcMain.handle('is-fullscreen', () => {
+    return mainWindow?.isFullScreen() ?? false
+  })
+
   appSuspensionPowerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension')
   displaySleepPowerSaveBlockerId = powerSaveBlocker.start('prevent-display-sleep')
 
   setTimeout(() => {
-    setupAutoUpdater(mainWindow as BrowserWindow)
+    // Auto-updater disabled for custom builds
+    // setupAutoUpdater(mainWindow as BrowserWindow)
   }, 5000)
 })
 

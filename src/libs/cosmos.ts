@@ -492,6 +492,11 @@ declare global {
        */
       getHardwareTelemetryInfo: () => Promise<TelemetrySystemHardwareInfo>
       /**
+       * Update the application menu language
+       * @param locale - The locale code (e.g., 'en', 'zh')
+       * @returns Promise resolving when menu is updated
+       */
+      updateMenuLanguage: (locale: string) => Promise<void>
        * Whether the bundled Piper synthesizer is available for offline alert speech
        * @returns {Promise<boolean>} True when the runtime and the default voice are present
        */

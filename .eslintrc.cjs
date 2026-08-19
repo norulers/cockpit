@@ -106,6 +106,7 @@ module.exports = {
         ignoreHTMLAttributeValues: true,
         ignoreHTMLTextContents: true,
         ignoreUrls: true,
+        ignoreStrings: true,
       },
     ],
   },
@@ -117,6 +118,12 @@ module.exports = {
   overrides: [
     {
       files: ['*.vue'],
+      rules: {
+        'max-len': ['off'],
+      },
+    },
+    {
+      files: ['*.json'],
       rules: {
         'max-len': ['off'],
       },

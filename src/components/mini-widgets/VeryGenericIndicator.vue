@@ -23,7 +23,7 @@
         </span>
       </div>
       <span class="w-full text-sm absolute bottom-[0.5rem] whitespace-nowrap text-ellipsis overflow-x-hidden">
-        {{ miniWidget.options.displayName }}
+        {{ $t(miniWidget.options.displayName) }}
       </span>
     </div>
   </div>
@@ -34,7 +34,7 @@
   >
     <v-card class="rounded-lg" :style="interfaceStore.globalGlassMenuStyles">
       <v-card-title class="relative py-4 text-center text-h6 font-weight-bold">
-        Very Generic Indicator
+        {{ $t('Very Generic Indicator') }}
         <v-btn
           icon="mdi-close"
           variant="text"
@@ -44,8 +44,8 @@
         />
       </v-card-title>
       <v-tabs v-model="currentTab" color="white" fixed-tabs class="px-6 -mt-[10px]">
-        <v-tab value="presets" class="text-white">Presets</v-tab>
-        <v-tab value="custom" class="text-white">Custom</v-tab>
+        <v-tab value="presets" class="text-white">{{ $t('Presets') }}</v-tab>
+        <v-tab value="custom" class="text-white">{{ $t('Custom') }}</v-tab>
       </v-tabs>
       <v-card-text class="px-8 py-5 max-h-[65vh] overflow-y-auto">
         <v-window v-model="currentTab">
@@ -54,7 +54,7 @@
               <div class="flex gap-4">
                 <v-text-field
                   v-model="miniWidget.options.displayName"
-                  label="Display name"
+                  :label="$t('Display name')"
                   variant="outlined"
                   density="compact"
                   hide-details
@@ -62,7 +62,7 @@
                 />
                 <v-text-field
                   v-model="miniWidget.options.widgetWidth"
-                  label="Display width"
+                  :label="$t('Display width')"
                   type="number"
                   variant="outlined"
                   density="compact"
@@ -74,15 +74,20 @@
               <DataLakeExpressionInput
                 v-if="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen"
                 v-model="miniWidget.options.variableName"
-                label="Variable"
+                :label="$t('Variable')"
               >
                 <template #hint>
                   <p class="text-sm mb-2">
-                    Show a single variable's value, or a text template combining as many of them as you want.
+                    {{
+                      $t("Show a single variable's value, or a text template combining as many of them as you want.")
+                    }}
                   </p>
                   <p class="text-sm">
-                    Click the field to pick a data-lake variable, and wrap variables in &#123;&#123; &#125;&#125; to
-                    write a template — e.g. Lat &#123;&#123; mavlink/1/1/GLOBAL_POSITION_INT/lat &#125;&#125;.
+                    {{
+                      $t(
+                        'Click the field to pick a data-lake variable, and wrap variables in &#123;&#123; &#125;&#125; to write a template — e.g. Lat &#123;&#123; mavlink/1/1/GLOBAL_POSITION_INT/lat &#125;&#125;.'
+                      )
+                    }}
                   </p>
                 </template>
               </DataLakeExpressionInput>
@@ -90,7 +95,7 @@
               <v-checkbox
                 v-model="miniWidget.options.useStringVariable"
                 :disabled="valueIsTemplate"
-                label="Use string variable (don't parse as number)"
+                :label="$t(`Use string variable (don't parse as number)`)"
                 density="compact"
                 hide-details
                 class="-my-2"
@@ -99,7 +104,7 @@
               <div class="flex gap-4">
                 <v-text-field
                   v-model="miniWidget.options.variableUnit"
-                  label="Unit"
+                  :label="$t('Unit')"
                   variant="outlined"
                   density="compact"
                   hide-details
@@ -108,7 +113,7 @@
                 <v-text-field
                   v-model="miniWidget.options.variableMultiplier"
                   :disabled="miniWidget.options.useStringVariable || valueIsTemplate"
-                  label="Multiplier"
+                  :label="$t('Multiplier')"
                   variant="outlined"
                   density="compact"
                   hide-details
@@ -117,11 +122,11 @@
                 <v-text-field
                   v-model="miniWidget.options.decimalPlaces"
                   :disabled="miniWidget.options.useStringVariable || valueIsTemplate"
-                  label="Decimal places"
+                  :label="$t('Decimal places')"
                   type="number"
                   min="0"
                   max="5"
-                  placeholder="Auto-formatting"
+                  :placeholder="$t('Auto-formatting')"
                   variant="outlined"
                   density="compact"
                   hide-details
@@ -139,8 +144,8 @@
                   </div>
                   <v-text-field
                     :model-value="iconDisplayName"
-                    label="Icon"
-                    placeholder="Click to choose..."
+                    :label="$t('Icon')"
+                    :placeholder="$t('Click to choose...')"
                     variant="outlined"
                     density="compact"
                     hide-details
@@ -156,8 +161,8 @@
                     class="shrink-0 vgi-category-toggle elevation-1"
                     @update:model-value="onIconCategoryChange"
                   >
-                    <v-btn value="stock" size="small" class="text-white">Basic icons</v-btn>
-                    <v-btn value="custom" size="small" class="text-white">Custom icons</v-btn>
+                    <v-btn value="stock" size="small" class="text-white">{{ $t('Basic icons') }}</v-btn>
+                    <v-btn value="custom" size="small" class="text-white">{{ $t('Custom icons') }}</v-btn>
                   </v-btn-toggle>
                 </div>
                 <Transition>
@@ -165,7 +170,7 @@
                     <template v-if="iconCategory === 'stock'">
                       <v-text-field
                         v-model="iconSearchString"
-                        placeholder="Search icons..."
+                        :placeholder="$t('Search icons...')"
                         variant="outlined"
                         density="compact"
                         hide-details
@@ -213,7 +218,7 @@
 
                     <template v-else>
                       <div class="flex items-center justify-between w-full">
-                        <span class="text-xs text-slate-100/50">Your uploaded icons</span>
+                        <span class="text-xs text-slate-100/50">{{ $t('Your uploaded icons') }}</span>
                         <v-btn
                           variant="elevated"
                           size="small"
@@ -221,7 +226,7 @@
                           class="self-center bg-[#FFFFFF12]"
                           @click="iconUploadInput?.click()"
                         >
-                          Upload SVG
+                          {{ $t('Upload SVG') }}
                         </v-btn>
                         <input
                           ref="iconUploadInput"
@@ -248,7 +253,7 @@
                         </div>
                       </div>
                       <div v-else class="w-full py-6 text-sm text-center text-slate-100/40">
-                        No custom icons uploaded yet. Use "Upload SVG" to add one.
+                        {{ $t('No custom icons uploaded yet. Use "Upload SVG" to add one.') }}
                       </div>
                     </template>
                   </div>
@@ -272,7 +277,7 @@
                     {{ template.variableUnit }}
                   </span>
                   <span class="w-full text-sm font-semibold leading-4 whitespace-nowrap">
-                    {{ template.displayName }}
+                    {{ $t(template.displayName) }}
                   </span>
                 </div>
               </div>
@@ -283,7 +288,7 @@
       <v-divider class="mx-10" />
       <v-card-actions>
         <div class="flex items-center justify-end w-full pa-2">
-          <v-btn color="white" @click="closeVgiDialog">Done</v-btn>
+          <v-btn color="white" @click="closeVgiDialog">{{ $t('Done') }}</v-btn>
         </div>
       </v-card-actions>
     </v-card>

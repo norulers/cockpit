@@ -1,22 +1,25 @@
-<template>
+﻿<template>
   <BaseConfigurationView>
-    <template #title>Alerts configuration</template>
+    <template #title>{{ $t('Alerts configuration') }}</template>
     <template #content>
       <div
         class="flex flex-col justify-around align-start ml-5 max-h-[85vh] overflow-y-auto"
         :class="interfaceStore.isOnSmallScreen ? 'max-w-[70vw]' : 'max-w-[40vw]'"
       >
         <ExpansiblePanel :is-expanded="!interfaceStore.isOnPhoneScreen" no-top-divider>
-          <template #title>Voice alerts:</template>
+          <template #title>{{ $t('Voice alerts:') }}</template>
           <template #info>
-            Enable voice alerts to receive audible notifications about system and vehicle activities. <br />
-            Select specific alert levels to customize which types of notifications you receive.
+            {{
+              $t(
+                'Enable voice alerts to receive audible notifications about system and vehicle activities. Select specific alert levels to customize which types of notifications you receive.'
+              )
+            }}
           </template>
           <template #content>
             <div class="flex justify-between">
               <v-switch
                 :model-value="alertStore.enableVoiceAlerts"
-                label="Enable voice alerts"
+                :label="$t('Enable voice alerts')"
                 color="white"
                 class="ml-3"
                 @update:model-value="setVoiceAlertsEnabled"
@@ -27,13 +30,13 @@
                 max="1"
                 step="0.05"
                 hide-details
-                label="Alerts volume"
+                :label="$t('Alerts volume')"
                 color="white"
                 class="max-w-[300px]"
                 :disabled="!alertStore.enableVoiceAlerts"
               />
             </div>
-            <span class="text-sm font-medium mt-4">Alert levels:</span>
+            <span class="text-sm font-medium mt-4">{{ $t('Alert levels:') }}</span>
             <div class="flex flex-wrap items-center justify-start">
               <div
                 v-for="enabledLevel in alertStore.enabledAlertLevels"
@@ -42,14 +45,14 @@
               >
                 <v-checkbox
                   :model-value="enabledLevel.enabled"
-                  :label="capitalize(enabledLevel.level)"
+                  :label="translateAlertLevel(enabledLevel.level)"
                   hide-details
                   color="white"
                   @update:model-value="(value) => setAlertLevelEnabled(enabledLevel.level, value)"
                 />
               </div>
             </div>
-            <span class="text-sm font-medium mt-4">Alert voice:</span>
+            <span class="text-sm font-medium mt-4">{{ $t('Alert voice:') }}</span>
             <div class="flex items-center gap-x-3 mt-2 mb-2 ml-2 max-w-[620px]">
               <v-select
                 v-if="voiceOptions.length > 0"
@@ -57,7 +60,7 @@
                 :items="voiceOptions"
                 item-title="name"
                 item-value="value"
-                aria-label="Alert voice"
+                :aria-label="$t('Alert voice')"
                 theme="dark"
                 density="compact"
                 variant="outlined"
@@ -66,9 +69,9 @@
                 @update:model-value="setAlertVoice"
               />
               <p v-else-if="voiceListSettled" class="text-sm text-yellow-300 max-w-[350px]">
-                Voice system not working: no speech voice found.
+                {{ $t('Voice system not working: no speech voice found.') }}
                 <template v-if="hostOs === 'Linux'">
-                  Install <span class="font-mono">speech-dispatcher</span> and <span class="font-mono">espeak-ng</span>.
+                  {{ $t('Install {first} and {second}.', { first: 'speech-dispatcher', second: 'espeak-ng' }) }}
                 </template>
               </p>
               <template v-if="piperAvailable && !allHdVoicesDownloaded">
@@ -79,13 +82,18 @@
                   class="text-none bg-[#FFFFFF22] text-white shrink-0"
                   @click="promptDownloadHdVoices"
                 >
-                  Download higher-quality voices
+                  {{ $t('Download higher-quality voices') }}
                 </v-btn>
                 <div v-else class="flex items-center gap-x-2 shrink-0">
                   <div class="w-[220px]">
                     <v-progress-linear :model-value="hdDownloadPercent" height="4" color="white" rounded />
                     <p class="text-xs opacity-70 mt-1 text-center leading-none">
-                      {{ hdDownloadProgress.completed }} of {{ hdDownloadProgress.total }} voices
+                      {{
+                        $t('{completed} of {total} voices', {
+                          completed: hdDownloadProgress.completed,
+                          total: hdDownloadProgress.total,
+                        })
+                      }}
                     </p>
                   </div>
                   <v-btn
@@ -94,7 +102,7 @@
                     class="text-none bg-[#FFFFFF22] text-white"
                     @click="cancelHdVoiceDownload"
                   >
-                    Cancel
+                    {{ $t('Cancel') }}
                   </v-btn>
                 </div>
               </template>
@@ -105,7 +113,7 @@
                 class="text-none bg-[#FFFFFF22] text-white shrink-0 ml-auto"
                 @click="promptDeleteHdVoices"
               >
-                Remove higher-quality voices
+                {{ $t('Remove higher-quality voices') }}
               </v-btn>
             </div>
             <v-checkbox
@@ -122,7 +130,7 @@
         <!-- Armed Menu Warning Toggle -->
         <v-switch
           :model-value="!alertStore.neverShowArmedMenuWarning"
-          label="Show warning when opening menu with armed vehicle"
+          :label="$t('Show warning when opening menu with armed vehicle')"
           color="white"
           class="mt-3 mb-2 ml-3"
           hide-details
@@ -134,7 +142,8 @@
 </template>
 
 <script setup lang="ts">
-import { capitalize, computed } from 'vue'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import ExpansiblePanel from '@/components/ExpansiblePanel.vue'
 import { useInteractionDialog } from '@/composables/interactionDialog'
@@ -146,6 +155,7 @@ import { useAppInterfaceStore } from '@/stores/appInterface'
 
 import BaseConfigurationView from './BaseConfigurationView.vue'
 
+const { t } = useI18n()
 const interfaceStore = useAppInterfaceStore()
 const alertStore = useAlertStore()
 const { showDialog, closeDialog } = useInteractionDialog()
@@ -173,6 +183,18 @@ const hdDownloadPercent = computed(() => {
   const { completed, total, voiceProgress } = hdDownloadProgress.value
   return total > 0 ? ((completed + voiceProgress) / total) * 100 : 0
 })
+
+// Translate alert level names
+const translateAlertLevel = (level: string): string => {
+  const mapping: Record<string, string> = {
+    info: t('Info'),
+    success: t('Success'),
+    error: t('Error'),
+    warning: t('Warning'),
+    critical: t('Critical'),
+  }
+  return mapping[level.toLowerCase()] || level
+}
 
 const setVoiceAlertsEnabled = (value: boolean | null): void => {
   const enabled = value ?? false

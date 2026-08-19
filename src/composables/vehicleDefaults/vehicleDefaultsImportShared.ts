@@ -1,4 +1,5 @@
 import { type Ref, ref } from 'vue'
+import type { ComposerTranslation } from 'vue-i18n'
 
 import { OtherProtocol } from '@/libs/joystick/protocols/other'
 import {
@@ -66,11 +67,13 @@ export interface VehicleDefaultsEvaluationBundle {
  * Builds the list of joystick bindings that differ from the vehicle default mapping.
  * @param {JoystickProtocolActionsMapping} currentMapping - The user's current mapping
  * @param {JoystickProtocolActionsMapping} defaultMapping - The vehicle-type default mapping
+ * @param {ComposerTranslation} t - Vue i18n translation function
  * @returns {JoystickImportRow[]} Rows to show in the import UI
  */
 export const buildJoystickImportRows = (
   currentMapping: JoystickProtocolActionsMapping,
-  defaultMapping: JoystickProtocolActionsMapping
+  defaultMapping: JoystickProtocolActionsMapping,
+  t: ComposerTranslation
 ): JoystickImportRow[] => {
   const rows: JoystickImportRow[] = []
 
@@ -84,7 +87,7 @@ export const buildJoystickImportRows = (
         rows.push({
           id: `axis-${axisKey}`,
           axisKey,
-          inputLabel: `Axis ${axisKey}`,
+          inputLabel: t('Axis {index}', { index: axisKey }),
           fromActionName: `${currentCorr.action.name} (${signed(currentCorr.min)} / ${signed(currentCorr.max)})`,
           toActionName: `${defaultCorr.action.name} (${signed(defaultCorr.min)} / ${signed(defaultCorr.max)})`,
         })
@@ -95,8 +98,8 @@ export const buildJoystickImportRows = (
     rows.push({
       id: `axis-${axisKey}`,
       axisKey,
-      inputLabel: `Axis ${axisKey}`,
-      fromActionName: currentCorr?.action.name ?? 'Unassigned',
+      inputLabel: t('Axis {index}', { index: axisKey }),
+      fromActionName: currentCorr?.action.name ?? t('Unassigned'),
       toActionName: defaultCorr.action.name,
     })
   }
@@ -115,8 +118,8 @@ export const buildJoystickImportRows = (
       id: `btn-${modKey}-${btnKey}`,
       modifier: modKey,
       buttonKey: Number(btnKey),
-      inputLabel: `Button ${btnKey} (${modKey})`,
-      fromActionName: currentBtn?.action.name ?? 'Unassigned',
+      inputLabel: t('Button {button} ({modifier})', { button: btnKey, modifier: modKey }),
+      fromActionName: currentBtn?.action.name ?? t('Unassigned'),
       toActionName: defaultBtn.action.name,
     })
   }

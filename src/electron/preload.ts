@@ -105,6 +105,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCurrentUserAgent: () => ipcRenderer.invoke('get-current-user-agent'),
   getSystemInfo: () => ipcRenderer.invoke('get-system-info'),
   getHardwareTelemetryInfo: () => ipcRenderer.invoke('get-hardware-telemetry-info'),
+  updateMenuLanguage: (locale: string) => ipcRenderer.invoke('update-menu-language', locale),
+  toggleFullscreen: () => ipcRenderer.invoke('toggle-fullscreen'),
+  isFullscreen: () => ipcRenderer.invoke('is-fullscreen'),
+  onFullscreenChanged: (callback: (isFullscreen: boolean) => void) => {
+    ipcRenderer.on('fullscreen-changed', (_event, isFullscreen) => callback(isFullscreen))
+  },
   ttsAvailable: () => ipcRenderer.invoke('tts-available'),
   ttsListVoices: () => ipcRenderer.invoke('tts-list-voices'),
   ttsSynthesize: async (text: string, voiceKey: string) => {

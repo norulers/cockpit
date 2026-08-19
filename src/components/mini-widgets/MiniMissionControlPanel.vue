@@ -7,7 +7,7 @@
       class="flex gap-1 items-center overflow-hidden"
       :class="!vehicleStore.isVehicleOnline ? 'active-events-on-disabled' : ''"
     >
-      <v-tooltip location="top" open-delay="800" text="Skip to previous waypoint">
+      <v-tooltip location="top" open-delay="800" :text="$t('Skip to previous waypoint')">
         <template #activator="{ props: skipPrevProps }">
           <v-btn
             v-bind="skipPrevProps"
@@ -23,7 +23,7 @@
       <v-tooltip
         location="top"
         open-delay="800"
-        :text="missionStore.isMissionRunning ? 'Pause mission' : 'Start / resume mission'"
+        :text="missionStore.isMissionRunning ? $t('Pause mission') : $t('Start / resume mission')"
       >
         <template #activator="{ props: playPauseProps }">
           <v-btn
@@ -37,7 +37,7 @@
           />
         </template>
       </v-tooltip>
-      <v-tooltip location="top" open-delay="800" text="Skip to next waypoint">
+      <v-tooltip location="top" open-delay="800" :text="$t('Skip to next waypoint')">
         <template #activator="{ props: skipNextProps }">
           <v-btn
             v-bind="skipNextProps"
@@ -51,7 +51,7 @@
         </template>
       </v-tooltip>
       <CruiseSpeedControl compact />
-      <v-tooltip location="top" open-delay="800" text="Return to home">
+      <v-tooltip location="top" open-delay="800" :text="$t('Return to home')">
         <template #activator="{ props: homeProps }">
           <v-btn
             v-bind="homeProps"
@@ -66,7 +66,9 @@
       </v-tooltip>
       <v-divider vertical class="h-[25px] mt-[5px]" />
       <div class="flex flex-col justify-between w-[46px] h-[33px] text-[8px] ml-1 mt-[4px]">
-        <div class="w-full text-nowrap text-center">Current WP</div>
+        <div class="w-full text-nowrap text-center">
+          {{ $t('Current WP') }}
+        </div>
         <div class="mb-1 text-[12px] font-bold">{{ currentWaypointOnMission }}</div>
       </div>
     </div>
@@ -75,6 +77,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import CruiseSpeedControl from '@/components/mission-planning/CruiseSpeedControl.vue'
 import { useInteractionDialog } from '@/composables/interactionDialog'
@@ -82,6 +85,7 @@ import { openSnackbar } from '@/composables/snackbar'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
 import { useMissionStore } from '@/stores/mission'
 
+const { t } = useI18n()
 const { showDialog, closeDialog } = useInteractionDialog()
 const missionStore = useMissionStore()
 const vehicleStore = useMainVehicleStore()
@@ -103,24 +107,26 @@ const skipToNextWaypoint = (): void => {
 
 const handleReturnHome = (): void => {
   showDialog({
-    title: 'Return to home',
-    message: 'Are you sure you want to send the vehicle home?',
+    title: t('Return to home'),
+    message: t('Are you sure you want to send the vehicle home?'),
     variant: 'warning',
     actions: [
       {
-        text: 'Cancel',
+        text: t('Cancel'),
         size: 'small',
         action: closeDialog,
       },
       {
-        text: 'Confirm',
+        text: t('Confirm'),
         size: 'small',
         action: () => {
           logUserAction('Confirmed return to home')
           closeDialog()
           vehicleStore.returnHome().catch((err) => {
             openSnackbar({
-              message: `Failed to return home: ${(err as Error).message}`,
+              message: t('Failed to return home: {error}', {
+                error: (err as Error).message,
+              }),
               variant: 'error',
             })
           })
@@ -141,7 +147,9 @@ const handlePlayAndPause = async (): Promise<void> => {
     }
   } catch (err) {
     openSnackbar({
-      message: `Failed to ${missionStore.isMissionRunning ? 'pause' : 'start'} mission: ${(err as Error).message}`,
+      message: missionStore.isMissionRunning
+        ? t('Failed to pause mission: {error}', { error: (err as Error).message })
+        : t('Failed to start mission: {error}', { error: (err as Error).message }),
       variant: 'error',
     })
   }

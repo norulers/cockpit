@@ -195,6 +195,18 @@ export const isElectron = (): boolean => {
 }
 
 /**
+ * Detects the host operating system, named as users know it
+ * @returns {'Linux' | 'Windows' | 'macOS' | undefined} The host OS name, or undefined when it cannot be told
+ */
+export const hostOsName = (): 'Linux' | 'Windows' | 'macOS' | undefined => {
+  const platform = (navigator.userAgentData?.platform ?? navigator.platform ?? navigator.userAgent).toLowerCase()
+  if (platform.includes('linux')) return 'Linux'
+  if (platform.includes('win')) return 'Windows'
+  if (platform.includes('mac')) return 'macOS'
+  return undefined
+}
+
+/**
  * Copy text to clipboard
  * @param {string} text The text to copy
  * @returns {Promise<void>} A promise that resolves when the text is copied
@@ -412,3 +424,14 @@ export const tryACoupleOfTimes = async <T>(
 export const messageFromError = (error: unknown): string => {
   return error instanceof Error ? error.message : String(error)
 }
+
+/**
+ * Deep-clone a JSON-representable value into plain data, dropping any Vue reactivity proxy on it or
+ * nested inside it. Prefer this over `structuredClone`, which throws on reactive proxies. Functions
+ * and `undefined` values are dropped, as JSON cannot represent them. The walk reads through proxies,
+ * so unwrap with `toRaw` first when calling from a `computed` or a render function, or every nested
+ * read becomes a dependency of it.
+ * @param {T} value The value to flatten.
+ * @returns {T} A detached copy holding no proxies.
+ */
+export const toPlain = <T>(value: T): T => JSON.parse(JSON.stringify(value))

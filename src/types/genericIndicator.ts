@@ -23,6 +23,10 @@ export interface VeryGenericIndicatorPreset {
    * Value that multiplies the original value to bring it to a representative unit system
    */
   variableMultiplier: number
+  /**
+   * Fixed decimal places for the displayed value. When omitted, auto-formatting is used.
+   */
+  decimalPlaces?: number
 }
 
 export const veryGenericIndicatorPresets: VeryGenericIndicatorPreset[] = [
@@ -42,7 +46,7 @@ export const veryGenericIndicatorPresets: VeryGenericIndicatorPreset[] = [
   },
   {
     displayName: 'Water Temp',
-    variableName: 'SCALED_PRESSURE2.temperature',
+    variableName: 'SCALED_PRESSURE2/temperature',
     iconName: 'mdi-thermometer',
     variableUnit: '°C',
     variableMultiplier: 0.01,
@@ -95,5 +99,21 @@ export const veryGenericIndicatorPresets: VeryGenericIndicatorPreset[] = [
     iconName: 'mdi-arrow-collapse-down',
     variableUnit: 'm',
     variableMultiplier: 1,
+  },
+  {
+    displayName: 'Speed',
+    variableName: 'VFR_HUD/groundspeed',
+    iconName: 'mdi-speedometer',
+    variableUnit: 'm/s',
+    variableMultiplier: 1,
+    decimalPlaces: 1,
+  },
+  {
+    displayName: 'Celsius 2',
+    variableName: 'celsius2TemperatureC',
+    iconName: 'mdi-thermometer',
+    variableUnit: '°C',
+    variableMultiplier: 1,
+    decimalPlaces: 1,
   },
 ]

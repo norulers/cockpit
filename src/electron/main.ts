@@ -14,12 +14,20 @@ import { setupOsmRefererService } from './services/osm-referer'
 import { setupResourceMonitoringService } from './services/resource-monitoring'
 import { setupFilesystemStorage } from './services/storage'
 import { setupSystemInfoService } from './services/system-info'
+import { setupTTSService } from './services/tts'
 import { setupUserAgentService } from './services/user-agent'
 import { setupVideoRecordingService } from './services/video-recording'
 import { setupWorkspaceService } from './services/workspace'
 
 // Setup the logger service as soon as possible to avoid different behaviors across runtime
 setupElectronLogService()
+
+// On Linux, Chromium gates its Web Speech API backend (used by the voice-alerts feature) behind
+// the `--enable-speech-dispatcher` switch, and it must be set before `app.whenReady()` to take effect.
+// Harmless when speech-dispatcher / libspeechd is not available on the host.
+if (process.platform === 'linux') {
+  app.commandLine.appendSwitch('enable-speech-dispatcher')
+}
 
 export const ROOT_PATH = {
   dist: join(__dirname, '..'),
@@ -139,6 +147,7 @@ setupJoystickMonitoring()
 setupVideoRecordingService()
 setupGo2RTCService()
 setupMenuService()
+setupTTSService()
 
 app.whenReady().then(async () => {
   console.log('Electron app is ready.')

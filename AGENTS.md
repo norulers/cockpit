@@ -64,8 +64,6 @@ Prefer deletion over addition, boring over clever, and the shortest working diff
 
 **Do not be lazy about:** understanding the problem, input validation at trust boundaries, error handling that prevents data loss, security, accessibility, and the calibration real hardware needs (clocks drift, sensors read off — the vehicle is never the spec ideal).
 
-**Leave one runnable check.** Non-trivial logic must leave behind at least ONE runnable check — the smallest thing that fails if the logic breaks (an assert-based self-check or one small test; no new frameworks or fixtures). Trivial one-liners need none.
-
 **Mark deliberate corner-cuts.** When you knowingly cut a real corner with a known ceiling (global lock, O(n²) scan, naive heuristic), leave a `ponytail:` comment naming the ceiling and the upgrade path.
 
 ## Scope discipline
@@ -125,6 +123,7 @@ After running the lint and typecheck commands, check whether they auto-fixed (mo
 ## Persistence and settings migrations
 
 - Choose the storage backend deliberately. `useBlueOsStorage` syncs the value to the vehicle, so every topside computer and every operator of that vehicle shares it. Machine-specific values — device and serial paths, local filesystem paths, window geometry — must stay machine-local, and must never be auto-acted on after a sync, since auto-connecting to a synced `/dev/ttyUSB0` can open the wrong device. Identify hardware by a stable id (USB VID/PID, device serial) rather than by path.
+- Never write `undefined` into a setting; clear one with `null` instead. `undefined` is what the name says — not yet defined — so it is only ever valid as the initial state of a key nobody has written to. `null` survives `JSON.stringify` and syncs like any other value, while `undefined` is dropped from the payload and arrives as a value-less setting, which `useBlueOsStorage` ignores rather than handing consumers an `undefined` the key's type never promised.
 - Avoid automatic user-data migrations. They are the riskiest thing we ship, so treat them as a last resort rather than the normal way to reshape a key.
 - Prefer the non-destructive route: introduce a new versioned key (e.g. `cockpit-foo-v2`) and read the old key only as a fallback, leaving the user's original data untouched. Do not reuse the old key with a new schema.
 - Write an automatic migration only when you fully understand the transformation, it is provably idempotent, and it cannot lose data. Once the new key has been written, re-running the migration on a later launch must never overwrite user data.
@@ -196,7 +195,8 @@ This applies to any pair of components/views with substantial overlap, not just 
 - When fixing feedback for code that is already committed on the branch, prefer `git commit --fixup <sha>` over a new standalone "fix typo"/"address review" commit, unless the user says otherwise.
 - Fold `fixup!`/`squash!` commits into their targets with `git rebase --autosquash` BEFORE pushing (or before opening a PR / requesting review). Never leave a `fixup!`/`squash!` commit in pushed history — the branch should always be presented already squashed.
 - Branch names follow `issue-<number>-short-words`, using at most 5 words in the descriptive part.
-- Pick the commit-subject type that actually fits the change (`feat`/`fix`/`refactor`/`docs`/etc.). Do not prefix every commit with `fix:`. PR-number references belong in the PR body, not the commit subject.
+- Pick the commit-subject prefix that actually fits the change. Every style in this history is fine: a conventional type (`feat`/`fix`/`refactor`/`docs`/etc.), the area touched (`map:`, `widgets:`, `mission-planning:`, `ci:`), or both together (`fix: widgets: …`), the area form being the most common. What matters is that the prefix describes this change — do not prefix every commit with `fix:`.
+- Do not reference GitHub issues or pull requests in commit messages — not `#N`, not `owner/repo#N`, and not closing keywords (`Fixes`/`Closes`/`Resolves` …). Put those in the PR body instead. A reference in a commit re-fires on the issue timeline every time a fork syncs that commit.
 
 ## Data-lake first for vehicle data in widgets
 

@@ -11,10 +11,16 @@
       class="h-full left-[0.5rem] bottom-[5%] absolute text-[2.25rem]"
       :icon-name="miniWidget.options.iconName"
     />
-    <div class="absolute left-[3rem] h-full select-none font-semibold scroll-container w-full">
-      <div class="w-full" :class="{ 'scroll-text': valueIsOverflowing }">
-        <span class="font-mono text-xl leading-6">{{ parsedState }}</span>
-        <span class="text-xl leading-6"> {{ String.fromCharCode(0x20) }} {{ miniWidget.options.variableUnit }} </span>
+    <div ref="valueArea" class="absolute left-[3rem] right-0 h-full select-none font-semibold scroll-container">
+      <div
+        class="w-full"
+        :class="{ 'scroll-text': valueIsOverflowing }"
+        :style="{ '--value-scroll-distance': `-${valueOverflow}px` }"
+      >
+        <span ref="valueText" class="inline-block">
+          <span class="font-mono text-xl leading-6">{{ parsedState }}</span>
+          <span class="text-xl leading-6"> {{ String.fromCharCode(0x20) }} {{ miniWidget.options.variableUnit }} </span>
+        </span>
       </div>
       <span class="w-full text-sm absolute bottom-[0.5rem] whitespace-nowrap text-ellipsis overflow-x-hidden">
         {{ $t(miniWidget.options.displayName) }}
@@ -65,44 +71,30 @@
                 />
               </div>
 
-              <div>
-                <v-text-field
-                  :model-value="miniWidget.options.variableName"
-                  :label="$t('Variable')"
-                  :placeholder="$t('Click to choose...')"
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  readonly
-                  append-inner-icon="mdi-swap-horizontal-bold"
-                  class="cursor-pointer"
-                  @click="showVariableChooseModal = !showVariableChooseModal"
-                />
-                <Transition>
-                  <div v-if="showVariableChooseModal" class="mt-2">
-                    <v-text-field
-                      v-model="variableNameSearchString"
-                      :placeholder="$t('Search variable...')"
-                      variant="outlined"
-                      density="compact"
-                      hide-details
-                    />
-                    <div class="grid w-full h-32 grid-cols-1 mt-2 overflow-x-hidden overflow-y-auto">
-                      <span
-                        v-for="(variable, i) in variableNamesToShow"
-                        :key="i"
-                        class="h-8 p-1 m-1 overflow-x-hidden text-white transition-all rounded-md cursor-pointer select-none bg-slate-700 hover:bg-slate-400/20"
-                        @click="onChooseVariable(variable)"
-                      >
-                        {{ variable }}
-                      </span>
-                    </div>
-                  </div>
-                </Transition>
-              </div>
+              <DataLakeExpressionInput
+                v-if="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen"
+                v-model="miniWidget.options.variableName"
+                :label="$t('Variable')"
+              >
+                <template #hint>
+                  <p class="text-sm mb-2">
+                    {{
+                      $t("Show a single variable's value, or a text template combining as many of them as you want.")
+                    }}
+                  </p>
+                  <p class="text-sm">
+                    {{
+                      $t(
+                        'Click the field to pick a data-lake variable, and wrap variables in &#123;&#123; &#125;&#125; to write a template — e.g. Lat &#123;&#123; mavlink/1/1/GLOBAL_POSITION_INT/lat &#125;&#125;.'
+                      )
+                    }}
+                  </p>
+                </template>
+              </DataLakeExpressionInput>
 
               <v-checkbox
                 v-model="miniWidget.options.useStringVariable"
+                :disabled="valueIsTemplate"
                 :label="$t(`Use string variable (don't parse as number)`)"
                 density="compact"
                 hide-details
@@ -120,7 +112,7 @@
                 />
                 <v-text-field
                   v-model="miniWidget.options.variableMultiplier"
-                  :disabled="miniWidget.options.useStringVariable"
+                  :disabled="miniWidget.options.useStringVariable || valueIsTemplate"
                   :label="$t('Multiplier')"
                   variant="outlined"
                   density="compact"
@@ -129,7 +121,7 @@
                 />
                 <v-text-field
                   v-model="miniWidget.options.decimalPlaces"
-                  :disabled="miniWidget.options.useStringVariable"
+                  :disabled="miniWidget.options.useStringVariable || valueIsTemplate"
                   :label="$t('Decimal places')"
                   type="number"
                   min="0"
@@ -271,11 +263,11 @@
           </v-window-item>
 
           <v-window-item value="presets">
-            <div class="flex flex-wrap items-center justify-around">
+            <div class="grid items-center grid-cols-3">
               <div
                 v-for="(template, i) in veryGenericIndicatorPresets"
                 :key="i"
-                class="flex items-center justify-center px-2 m-2 text-white transition-all rounded-md cursor-pointer hover:bg-slate-100/20"
+                class="flex items-center px-2 m-2 text-white transition-all rounded-md cursor-pointer hover:bg-slate-100/20"
                 @click="setIndicatorFromTemplate(template)"
               >
                 <VgiIcon class="relative w-[2rem] icon-symbol text-[34px] mx-2" :icon-name="template.iconName" />
@@ -308,18 +300,16 @@ import { useElementSize, watchThrottled } from '@vueuse/core'
 import Fuse from 'fuse.js'
 import { computed, onBeforeMount, onMounted, ref, toRefs, watch } from 'vue'
 
+import DataLakeExpressionInput from '@/components/DataLakeExpressionInput.vue'
 import VgiIcon from '@/components/mini-widgets/VgiIcon.vue'
 import { useInteractionDialog } from '@/composables/interactionDialog'
 import { useCustomIcons } from '@/composables/useCustomIcons'
-import {
-  getDataLakeVariableData,
-  listenDataLakeVariable,
-  listenToDataLakeVariablesInfoChanges,
-} from '@/libs/actions/data-lake'
-import { getAllDataLakeVariablesInfo } from '@/libs/actions/data-lake'
+import { useDataLakeVariable } from '@/composables/useDataLakeVariable'
+import { useResolvedDataLakeTemplate } from '@/composables/useResolvedDataLakeTemplate'
 import { type CustomIcon, customIconRefFromId, idFromCustomIconRef, isCustomIconRef } from '@/libs/custom-icons'
 import { CurrentlyLoggedVariables, datalogger } from '@/libs/sensors-logging'
 import { round } from '@/libs/utils'
+import { getSoleDataLakeVariableIdInString, replaceDataLakeInputsInString } from '@/libs/utils-data-lake'
 import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useWidgetManagerStore } from '@/stores/widgetManager'
 import { type VeryGenericIndicatorPreset, veryGenericIndicatorPresets } from '@/types/genericIndicator'
@@ -367,11 +357,30 @@ onBeforeMount(() => {
 
 const widgetStore = useWidgetManagerStore()
 
-const currentState = ref<unknown>(0)
+// The variable the indicator reads directly. Anything else mixes variables with text, and is shown
+// as a template instead, with the multiplier and the decimal places no longer applicable to it.
+const singleVariableId = computed(() => getSoleDataLakeVariableIdInString(miniWidget.value.options.variableName ?? ''))
+
+const valueIsTemplate = computed(() => singleVariableId.value === null && !!miniWidget.value.options.variableName)
+
+// Keyed on the variable name so that every writer of it — the config dialog, a preset, or a BlueOS
+// profile sync, which patches the widget in place rather than remounting it — resubscribes. A
+// template subscribes to nothing here, as `useResolvedDataLakeTemplate` follows its own references.
+const { value: currentState } = useDataLakeVariable(() => singleVariableId.value ?? undefined)
+
+const resolvedTemplate = useResolvedDataLakeTemplate(() =>
+  valueIsTemplate.value ? miniWidget.value.options.variableName : undefined
+)
 
 const finalValue = computed(() => Number(miniWidget.value.options.variableMultiplier) * Number(currentState.value))
 
 const parsedState = computed(() => {
+  if (valueIsTemplate.value) {
+    // A reference the data lake has no value for is left as-is by the resolver, and an internal
+    // variable id is not something the pilot should be reading on the indicator.
+    return replaceDataLakeInputsInString(resolvedTemplate.value ?? '--', () => '--')
+  }
+
   if (currentState.value === undefined) {
     return '--'
   }
@@ -404,9 +413,15 @@ const parsedState = computed(() => {
   return value.toFixed(0)
 })
 
-const valueIsOverflowing = computed(() => {
-  return finalValue.value <= -100000 || finalValue.value >= 1000000
-})
+const valueArea = ref<HTMLElement | null>(null)
+const { width: valueAreaWidth } = useElementSize(valueArea)
+const valueText = ref<HTMLElement | null>(null)
+const { width: valueTextWidth } = useElementSize(valueText)
+
+// How much of the value does not fit the space the icon leaves it, so a template — whose
+// `finalValue` is NaN, making every numeric comparison false — also gets the marquee when clipped.
+const valueOverflow = computed(() => Math.max(0, Math.round(valueTextWidth.value - valueAreaWidth.value)))
+const valueIsOverflowing = computed(() => valueOverflow.value > 0)
 
 const loggedMiniWidgets = ref(Array.from(CurrentlyLoggedVariables.getAllVariables()))
 const lastWidgetName = ref('')
@@ -433,16 +448,8 @@ const closeVgiDialog = async (): Promise<void> => {
   managerVars.configMenuOpen = false
 }
 
-const updateVariableState = (): void => {
-  currentState.value = getDataLakeVariableData(miniWidget.value.options.variableName)
-}
 const updateWidgetName = (): void => {
   miniWidget.value.name = miniWidget.value.options.displayName || miniWidget.value.options.variableName
-}
-const updateGenericVariablesNames = (): void => {
-  const variablesNames = Object.keys(getAllDataLakeVariablesInfo())
-  allVariablesNames.value = variablesNames
-  // TODO: Update CurrentlyLoggedVariables to match data lake state
 }
 
 const logData = computed(() => ({
@@ -475,7 +482,7 @@ watch(
 )
 
 watch(
-  finalValue,
+  parsedState,
   () => {
     if (widgetStore.miniWidgetManagerVars(miniWidget.value.hash).configMenuOpen === false) {
       logCurrentState()
@@ -484,42 +491,28 @@ watch(
   { immediate: true }
 )
 
-// Watch for changes in the data lake variable
-watch(
-  () => miniWidget.value.options.variableName,
-  (newVariableName) => {
-    if (!newVariableName) return
-    updateVariableState()
-  }
-)
 watch(
   miniWidget,
   () => {
-    updateVariableState()
     updateWidgetName()
-    updateGenericVariablesNames()
   },
   { deep: true }
 )
 onMounted(() => {
   // Update old variables naming to new pattern
   // TODO: Remove this before 1.0.0 release
-  if (miniWidget.value.options.variableName) {
-    miniWidget.value.options.variableName = miniWidget.value.options.variableName.replaceAll('.', '/')
+  // Only a lone id can carry the old dotted naming, so anything with a space or a brace in it is
+  // free text the user wrote, whose punctuation this would eat and persist.
+  const storedValue = miniWidget.value.options.variableName
+  if (storedValue && !/[\s{}]/.test(storedValue)) {
+    miniWidget.value.options.variableName = storedValue.replaceAll('.', '/')
   }
 
-  updateVariableState()
   updateWidgetName()
-  updateGenericVariablesNames()
 
   if (miniWidget.value.options.displayName && widgetStore.editingMode === false) {
     CurrentlyLoggedVariables.addVariable(miniWidget.value.options.displayName)
   }
-
-  // Update list of available variables when the data-lake has new stuff
-  listenToDataLakeVariablesInfoChanges(updateGenericVariablesNames)
-
-  chooseVariable(miniWidget.value.options.variableName)
 
   lastWidgetName.value = miniWidget.value.options.displayName
 })
@@ -552,10 +545,6 @@ watchThrottled(
   { throttle: 1000 }
 )
 
-// Search for variable using fuzzy-finder
-const variableNameSearchString = ref('')
-const allVariablesNames = ref<string[]>([])
-const showVariableChooseModal = ref(false)
 const showIconChooseModal = ref(false)
 const iconCategory = ref<'stock' | 'custom'>('stock')
 
@@ -610,47 +599,12 @@ const confirmRemoveCustomIcon = (icon: CustomIcon): void => {
   })
 }
 
-const variableNamesToShow = computed(() => {
-  if (variableNameSearchString.value === '') {
-    return allVariablesNames.value
-  }
-
-  const variableNameFuse = new Fuse(allVariablesNames.value, fuseOptions)
-  const filteredVariablesResult = variableNameFuse.search(variableNameSearchString.value)
-  return filteredVariablesResult.map((r) => r.item).filter((value, index, self) => self.indexOf(value) === index)
-})
-
-const chooseVariable = (variable: string): void => {
-  miniWidget.value.options.variableName = variable
-  variableNameSearchString.value = ''
-  showVariableChooseModal.value = false
-
-  listenDataLakeVariable(variable, updateVariableState)
-}
-
-const onChooseVariable = (variable: string): void => {
-  logUserAction(`Selected indicator variable '${variable}'`)
-  chooseVariable(variable)
-}
-
 const chooseIcon = (iconName: string): void => {
   logUserAction(`Selected indicator icon '${iconName}'`)
   miniWidget.value.options.iconName = iconName
   iconSearchString.value = ''
   if (!isCustomIconRef(iconName)) showIconChooseModal.value = false
 }
-
-watch(showVariableChooseModal, async (newValue) => {
-  if (newValue === true && variableNamesToShow.value.isEmpty()) {
-    widgetStore.miniWidgetManagerVars(miniWidget.value.hash).configMenuOpen = false
-    showVariableChooseModal.value = false
-    await showDialog({
-      message: 'No variables found to choose from. Please make sure your vehicle is connected.',
-      variant: 'error',
-    })
-    widgetStore.miniWidgetManagerVars(miniWidget.value.hash).configMenuOpen = true
-  }
-})
 
 const currentTab = ref(widgetIsConfigured.value ? 'custom' : 'presets')
 
@@ -661,6 +615,9 @@ const setIndicatorFromTemplate = (template: VeryGenericIndicatorPreset): void =>
   miniWidget.value.options.iconName = template.iconName
   miniWidget.value.options.variableUnit = template.variableUnit
   miniWidget.value.options.variableMultiplier = template.variableMultiplier
+  miniWidget.value.options.decimalPlaces = template.decimalPlaces ?? null
+  // Every preset is numeric, and this flag would bypass both the multiplier and the decimal places.
+  miniWidget.value.options.useStringVariable = false
 }
 </script>
 
@@ -696,7 +653,7 @@ const setIndicatorFromTemplate = (template: VeryGenericIndicatorPreset): void =>
   }
   90%,
   100% {
-    transform: translateX(-50%);
+    transform: translateX(var(--value-scroll-distance, -50%));
   }
 }
 </style>

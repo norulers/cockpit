@@ -6,7 +6,7 @@
         class="flex-col h-full overflow-y-auto ml-[10px] pr-3 -mr-[10px]"
         :class="interfaceStore.isOnSmallScreen ? 'max-w-[80vw] max-h-[90vh]' : 'max-w-[650px] max-h-[85vh]'"
       >
-        <ExpansiblePanel no-top-divider no-bottom-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
+        <ExpansiblePanel no-top-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
           <template #title>{{ $t('Positioning') }}</template>
           <template #info>
             <div class="w-full">
@@ -37,7 +37,7 @@
                     <p class="text-amber-100 text-sm">
                       {{
                         $t(
-                          'Reading external serial GNSS receivers is only available in Cockpit Standalone. Browsers cannot access serial devices outside of a secure context, so this feature is disabled here.'
+                          'Reading external serial GNSS receivers is only available in Cockpit standalone. Browsers cannot access serial devices outside of a secure context, so this feature is disabled here.'
                         )
                       }}
                     </p>
@@ -88,6 +88,27 @@
             </div>
           </template>
         </ExpansiblePanel>
+
+        <ExpansiblePanel v-model:is-expanded="customProvidersExpanded" no-top-divider no-bottom-divider>
+          <template #title>Custom map providers</template>
+          <template #info>
+            <div class="w-full">
+              <p>
+                Add your own map tile sources via an XYZ URL (remote or hosted on your vehicle) or an imported archive
+                (ZIP of {z}/{x}/{y} tiles, MBTiles or PMTiles).
+              </p>
+              <p class="mt-2">
+                For URL providers, the tile URL must contain the {z}, {x} and {y} placeholders. Imported archives are
+                cached on this computer for offline rendering and uploaded to the vehicle, which keeps the durable copy,
+                as soon as it is online. Each provider appears as a selectable base map under "Esri World Imagery" in
+                the map's layer selector.
+              </p>
+            </div>
+          </template>
+          <template #content>
+            <CustomTileProvidersManager />
+          </template>
+        </ExpansiblePanel>
       </div>
 
       <GnssDeviceDialog v-if="creatingDevice" model-value create @update:model-value="creatingDevice = false" />
@@ -102,9 +123,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import ExpansiblePanel from '@/components/ExpansiblePanel.vue'
+import CustomTileProvidersManager from '@/components/map/CustomTileProvidersManager.vue'
 import GnssDeviceDialog from '@/components/sources/GnssDeviceDialog.vue'
 import { useGnss } from '@/composables/useGnss'
 import { gnssStatusColor, gnssStatusIcon } from '@/libs/sensors/gnss'
@@ -117,6 +139,19 @@ const gnss = useGnss()
 
 const dialogDeviceId = ref<string | null>(null)
 const creatingDevice = ref(false)
+
+// Expanded by default except on phone screens (same as Positioning above). Always expand when reached via the map
+// layer selector's "Add map provider" shortcut. Immediate so a request raised before this view mounts is still consumed.
+const customProvidersExpanded = ref(!interfaceStore.isOnPhoneScreen)
+watch(
+  () => interfaceStore.sourcesCustomProvidersExpandRequested,
+  (requested) => {
+    if (!requested) return
+    customProvidersExpanded.value = true
+    interfaceStore.sourcesCustomProvidersExpandRequested = false
+  },
+  { immediate: true }
+)
 
 const openDialog = (id: string): void => {
   dialogDeviceId.value = id

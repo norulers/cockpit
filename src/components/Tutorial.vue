@@ -85,9 +85,11 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import CockpitLogo from '@/assets/cockpit-logo-minimal.avif'
+import { goToBaseView, goToMenuPage, goToSubMenu } from '@/composables/menuRouting'
 import { useSnackbar } from '@/composables/snackbar'
-import { SubMenuComponentName, SubMenuName, useAppInterfaceStore } from '@/stores/appInterface'
+import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
+import { SubMenuComponentName, SubMenuName } from '@/types/general'
 
 import GlassModal from './GlassModal.vue'
 
@@ -206,45 +208,37 @@ const steps = computed(() => [
   },
 ])
 
+// Each step replaces the address instead of adding one, so finishing the tour leaves the Back button where it was
+// rather than thirteen presses away from it.
 const handleStepChange = (newStep: number): void => {
   switch (newStep) {
     case 1:
       interfaceStore.isMainMenuVisible = false
-      interfaceStore.mainMenuCurrentStep = 1
+      goToBaseView(true)
       interfaceStore.componentToHighlight = 'none'
-      interfaceStore.currentSubMenuComponentName = null
-      interfaceStore.currentSubMenuName = null
       break
     case 2:
       interfaceStore.isMainMenuVisible = false
-      interfaceStore.mainMenuCurrentStep = 1
+      goToBaseView(true)
       interfaceStore.componentToHighlight = 'menu-trigger'
-      interfaceStore.currentSubMenuComponentName = null
-      interfaceStore.currentSubMenuName = null
       interfaceStore.userHasSeenTutorial = false
       break
     case 3:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
+      goToSubMenu(SubMenuName.settings, true)
       interfaceStore.componentToHighlight = 'settings-menu-item'
-      interfaceStore.currentSubMenuComponentName = null
       interfaceStore.userHasSeenTutorial = false
       break
     case 4:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsGeneral
+      goToMenuPage(SubMenuComponentName.SettingsGeneral, true)
       tallContent.value = true
       interfaceStore.userHasSeenTutorial = false
       interfaceStore.componentToHighlight = 'General'
       break
     case 5:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsGeneral
+      goToMenuPage(SubMenuComponentName.SettingsGeneral, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = false
       interfaceStore.componentToHighlight = 'vehicle-address'
@@ -252,36 +246,28 @@ const handleStepChange = (newStep: number): void => {
       break
     case 6:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsInterface
+      goToMenuPage(SubMenuComponentName.SettingsInterface, true)
       tallContent.value = false
       interfaceStore.userHasSeenTutorial = false
       interfaceStore.componentToHighlight = 'Interface'
       break
     case 7:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsJoystick
+      goToMenuPage(SubMenuComponentName.SettingsJoystick, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = true
       interfaceStore.componentToHighlight = 'Joystick'
       break
     case 8:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsVideo
+      goToMenuPage(SubMenuComponentName.SettingsVideo, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = true
       interfaceStore.componentToHighlight = 'Video'
       break
     case 9:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsTelemetry
+      goToMenuPage(SubMenuComponentName.SettingsTelemetry, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = false
       interfaceStore.isGlassModalAlwaysOnTop = true
@@ -289,9 +275,7 @@ const handleStepChange = (newStep: number): void => {
       break
     case 10:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsAlerts
+      goToMenuPage(SubMenuComponentName.SettingsAlerts, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = false
       interfaceStore.isGlassModalAlwaysOnTop = false
@@ -299,9 +283,7 @@ const handleStepChange = (newStep: number): void => {
       break
     case 11:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsDev
+      goToMenuPage(SubMenuComponentName.SettingsDev, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = true
       interfaceStore.isGlassModalAlwaysOnTop = false
@@ -309,16 +291,14 @@ const handleStepChange = (newStep: number): void => {
       break
     case 12:
       interfaceStore.isMainMenuVisible = true
-      interfaceStore.mainMenuCurrentStep = 2
-      interfaceStore.currentSubMenuName = SubMenuName.settings
-      interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsMission
+      goToMenuPage(SubMenuComponentName.SettingsMission, true)
       interfaceStore.userHasSeenTutorial = false
       tallContent.value = false
       interfaceStore.isGlassModalAlwaysOnTop = false
       interfaceStore.componentToHighlight = 'Mission'
       break
     case 13:
-      interfaceStore.currentSubMenuComponentName = null
+      goToSubMenu(SubMenuName.settings, true)
       interfaceStore.componentToHighlight = 'none'
       break
     default:
@@ -332,10 +312,11 @@ const dontShowTutorialAgain = (): void => {
   showTutorial.value = false
   currentTutorialStep.value = 1
   openSnackbar({
-    message: t('This guide can be reopened via the Settings > General menu'),
+    message: t('This guide can be reopened from the general settings.'),
     variant: 'info',
     closeButton: true,
     duration: 5000,
+    action: { label: 'General settings', handler: () => goToMenuPage(SubMenuComponentName.SettingsGeneral) },
   })
 }
 

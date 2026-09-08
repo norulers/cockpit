@@ -1,5 +1,3 @@
-import { DefineComponent } from 'vue'
-
 export type Point2D = {
   /**
    * Horizontal coordinate of the point
@@ -32,7 +30,35 @@ export interface DialogActions {
   disabled?: boolean
 }
 
-export type SubMenuComponent = DefineComponent<Record<string, never>, Record<string, never>, unknown> | null
+/**
+ * Available sub menus names
+ */
+export enum SubMenuName {
+  settings = 'settings',
+  tools = 'tools',
+}
+
+/**
+ * Available sub menus names
+ */
+export enum SubMenuComponentName {
+  SettingsGeneral = 'settings-general',
+  SettingsInterface = 'settings-interface',
+  SettingsJoystick = 'settings-joystick',
+  SettingsVideo = 'settings-video',
+  SettingsTelemetry = 'settings-telemetry',
+  SettingsAlerts = 'settings-alerts',
+  SettingsDev = 'settings-dev',
+  SettingsCloud = 'settings-cloud',
+  SettingsMission = 'settings-mission',
+  SettingsActions = 'settings-actions',
+  SettingsSources = 'settings-sources',
+  SettingsMAVLink = 'settings-mavlink',
+  ToolsMAVLink = 'tools-mavlink',
+  ToolsDataLake = 'tools-datalake',
+  ToolsLogs = 'tools-logs',
+  ToolsMap = 'tools-map',
+}
 
 export interface StorageDB {
   getItem: (key: string) => Promise<Blob | null | undefined>

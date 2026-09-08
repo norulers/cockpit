@@ -34,7 +34,8 @@ const nullValue = 'null'
 const possibleNullValues = [fallbackUsername, fallbackVehicleId, nullValue, null, undefined, '']
 const keyValueUpdateDebounceTime = 100
 
-export type SettingValue = string | number | boolean | object | null | undefined
+// No `undefined`: a cleared setting is spelled `null`, so writing one with no value at all is a type error.
+export type SettingValue = string | number | boolean | object | null
 
 /**
  * Error thrown when the vehicle ID does not match the expected ID
@@ -248,9 +249,15 @@ export class SettingsManager {
     this.keyValueUpdateTimeouts[key] = setTimeout(async () => {
       const newEpoch = epochChange !== undefined ? epochChange : Date.now()
       console.log(`[SettingsManager] Updating value of key '${key}' for user '${userId}' and vehicle '${vehicleId}'.`)
+      // `undefined` is dropped by JSON.stringify, so it would reach storage and the vehicle as a setting with no value
+      // at all. `null` is how a deliberately cleared setting is spelled, and it survives the round-trip.
+      if (value === undefined) {
+        console.warn(`[SettingsManager] Key '${key}' was written with no value. Storing 'null' instead.`)
+      }
+      const storedValue = value ?? null
       const newSetting = {
         epochLastChangedLocally: newEpoch,
-        value: value,
+        value: storedValue,
       }
       const localSettings = this.getLocalSettings()
       if (!localSettings[userId!]) {
@@ -263,8 +270,15 @@ export class SettingsManager {
       this.setLocalSettings(localSettings)
       this.notifyAllListenersAboutSettingsChange()
 
-      this.pushKeyValueUpdateToVehicleUpdateQueue(vehicleId!, userId!, key, value, newEpoch)
-      await this.sendKeyValueUpdatesToVehicle(userId!, vehicleId!, this.currentVehicleAddress)
+      this.pushKeyValueUpdateToVehicleUpdateQueue(vehicleId!, userId!, key, storedValue, newEpoch)
+
+      // A failed push must not escape this timeout as an unhandled rejection. The updates stay in the
+      // vehicle queue, so whatever drains it next retries them.
+      try {
+        await this.sendKeyValueUpdatesToVehicle(userId!, vehicleId!, this.currentVehicleAddress)
+      } catch (error) {
+        console.error('[SettingsManager]', `Could not send queued settings to vehicle '${vehicleId}'.`, error)
+      }
 
     }, keyValueUpdateDebounceTime)
   }
@@ -493,31 +507,6 @@ export class SettingsManager {
   }
 
   /**
-   * Merges two settings packages
-   * @param {SettingsPackage} settings1 - The first settings package
-   * @param {SettingsPackage} settings2 - The second settings package
-   * @returns {SettingsPackage} The merged settings package
-   */
-  private getMergedSettings = (settings1: SettingsPackage, settings2: SettingsPackage): SettingsPackage => {
-    const mergedSettings: SettingsPackage = {}
-
-    Object.keys({ ...settings1, ...settings2 }).forEach((key) => {
-      const setting1 = settings1[key]
-      const setting2 = settings2[key]
-
-      if (setting1 && setting2) {
-        mergedSettings[key] = setting1.epochLastChangedLocally > setting2.epochLastChangedLocally ? setting1 : setting2
-      } else if (setting1) {
-        mergedSettings[key] = setting1
-      } else if (setting2) {
-        mergedSettings[key] = setting2
-      }
-    })
-
-    return mergedSettings
-  }
-
-  /**
    * Adds a new key-value update to the vehicle update queue
    * @param {string} vehicleId - The ID of the vehicle to which the update belongs
    * @param {string} userId - The ID of the user to which the update belongs
@@ -547,6 +536,12 @@ export class SettingsManager {
    * @returns {Promise<VehicleSettings>} The settings from the vehicle. If no settings are found, an empty object is returned.
    */
   private getValidSettingsFromVehicle = async (vehicleAddress: string): Promise<VehicleSettings> => {
+    // Before any vehicle has connected there is no address to read from, which for our purposes is the
+    // same as a vehicle with no settings stored on it.
+    if (this.isNullValue(vehicleAddress)) {
+      return {}
+    }
+
     // eslint-disable-next-line vue/max-len, prettier/prettier, max-len
     const getSettingsFn = (): Promise<VehicleSettings | undefined> => this.vehicle.getKeyData(vehicleAddress, vehicleNewStyleSettingsKey)
     try {
@@ -633,6 +628,11 @@ export class SettingsManager {
     vehicleId: string,
     vehicleAddress: string
   ): Promise<void> => {
+    // Without an address there is nowhere to send the updates to, and they stay queued until there is one.
+    if (this.isNullValue(vehicleAddress)) {
+      return
+    }
+
     if (
       !this.keyValueVehicleUpdateQueue[vehicleId] ||
       !this.keyValueVehicleUpdateQueue[vehicleId]?.[userId] ||
@@ -646,13 +646,26 @@ export class SettingsManager {
     await this.confirmVehicleIdOrThrow(vehicleAddress, vehicleId)
 
     while (Object.keys(this.keyValueVehicleUpdateQueue[vehicleId][userId]).length !== 0) {
+      // A failing key is kept in the queue and retried once per second, so if the vehicle goes away
+      // mid-drain we stop here and leave the rest to the next connection.
+      if (this.currentVehicleAddress !== vehicleAddress) {
+        return
+      }
+
       const updatesForUser = Object.entries(this.keyValueVehicleUpdateQueue[vehicleId][userId])
       for (const [key, update] of updatesForUser) {
-        if (vehicleSettings[userId] && vehicleSettings[userId][key]) {
-          const noValue = update.value === undefined
+        // A setting with no value would land on the vehicle as an entry every topside then reads back as a valid
+        // setting, so it is dropped whether or not the key already exists there.
+        if (update.value === undefined) {
+          delete this.keyValueVehicleUpdateQueue[vehicleId][userId][key]
+          continue
+        }
+        // A value-less entry already on the vehicle counts as no setting at all, so its epoch must not win the
+        // comparison below and shield itself from the real value being sent.
+        if (vehicleSettings[userId]?.[key]?.value !== undefined) {
           const sameValue = isEqual(vehicleSettings[userId][key].value, update.value)
           const vehicleSettingIsNewer = vehicleSettings[userId][key].epochLastChangedLocally > update.epochChange
-          if (noValue || sameValue || vehicleSettingIsNewer) {
+          if (sameValue || vehicleSettingIsNewer) {
             delete this.keyValueVehicleUpdateQueue[vehicleId][userId][key]
             continue
           }
@@ -864,7 +877,9 @@ export class SettingsManager {
         const vehicleSetting = vehicleUserSettings[key]
         const localSetting = localUserVehicleSettings[key]
 
-        const hasLocalSetting = localSetting !== undefined
+        // A stored setting can carry no value at all, and preferring one by epoch would serve it back to every
+        // topside, so it counts as absent and gets dropped from the merged package instead.
+        const hasLocalSetting = localSetting?.value !== undefined
         if (hasLocalSetting) {
           console.debug(`[SettingsManager] Has local setting with epoch ${localSetting.epochLastChangedLocally}.`)
           console.debug('[SettingsManager] Local setting value:')
@@ -873,7 +888,7 @@ export class SettingsManager {
           console.debug(`[SettingsManager] No local setting.`)
         }
 
-        const hasVehicleSetting = vehicleSetting !== undefined
+        const hasVehicleSetting = vehicleSetting?.value !== undefined
         if (hasVehicleSetting) {
           console.debug(`[SettingsManager] Has vehicle setting with epoch ${vehicleSetting.epochLastChangedLocally}.`)
           console.debug('[SettingsManager] Vehicle setting value:')
@@ -1095,6 +1110,15 @@ export class SettingsManager {
         })
       )
     }
+  }
+
+  /**
+   * Handles a vehicle going offline, so nothing is synced to an address that stopped answering. Changes made
+   * while offline stay in the local settings and in the vehicle queue, and go up when the vehicle is back.
+   */
+  public handleVehicleGettingOffline = (): void => {
+    console.log('[SettingsManager]', 'Handling vehicle getting offline!')
+    this.currentVehicleAddress = nullValue
   }
 
   private runVehicleGettingOnlinePipeline = async (vehicleAddress: string): Promise<void> => {
@@ -1324,6 +1348,14 @@ export const settingsManager = new SettingsManager()
 window.addEventListener('vehicle-online', async (event: VehicleOnlineEvent) => {
   console.log('[SettingsManager]', `Vehicle online event received. Will handle vehicle getting online with address '${event.detail.vehicleAddress}'.`)
   await settingsManager.handleVehicleGettingOnline(event.detail.vehicleAddress)
+})
+
+/**
+ * Event handler for when a vehicle goes offline
+ */
+window.addEventListener('vehicle-offline', () => {
+  console.log('[SettingsManager]', 'Vehicle offline event received. Will stop syncing settings to it.')
+  settingsManager.handleVehicleGettingOffline()
 })
 
 /**

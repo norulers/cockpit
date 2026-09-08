@@ -1,15 +1,6 @@
-﻿import { getAllActionLinks, saveActionLink } from '@/libs/actions/action-links'
-import {
-  createDataLakeVariable,
-  DataLakeVariableType,
-  getDataLakeVariableInfo,
-  updateDataLakeVariableInfo,
-} from '@/libs/actions/data-lake'
-import {
-  createTransformingFunction,
-  getAllTransformingFunctions,
-  updateTransformingFunction,
-} from '@/libs/actions/data-lake-transformations'
+import { getAllActionLinks, saveActionLink } from '@/libs/actions/action-links'
+import { createDataLakeVariable, DataLakeVariableType } from '@/libs/actions/data-lake'
+import { ensureCockpitTransformingFunction } from '@/libs/actions/data-lake-transformations'
 import {
   getAllMavlinkMessageActionConfigs,
   registerMavlinkMessageActionConfig,
@@ -51,65 +42,58 @@ export const joystickInputAxes: Record<(typeof joystickAxisConfig)[number]['key'
 
 const setupMavlinkCameraResources = (): void => {
   const commonVariableConfig = { type: 'number' as DataLakeVariableType, allowUserToChangeValue: true }
-  const cameraVariables = [
-    { id: 'camera-zoom-decrease', nameKey: 'Camera Zoom Decrease', defaultValue: 0 },
-    { id: 'camera-zoom-increase', nameKey: 'Camera Zoom Increase', defaultValue: 0 },
-    { id: 'camera-zoom-speed', nameKey: 'Camera Zoom Speed', defaultValue: 3 },
-    { id: 'camera-focus-decrease', nameKey: 'Camera Focus Decrease', defaultValue: 0 },
-    { id: 'camera-focus-increase', nameKey: 'Camera Focus Increase', defaultValue: 0 },
-    { id: 'camera-focus-speed', nameKey: 'Camera Focus Speed', defaultValue: 3 },
-  ]
+  // Initialize camera zoom variables
+  createDataLakeVariable(
+    { id: 'camera-zoom-decrease', name: i18n.global.t('Camera Zoom Decrease'), ...commonVariableConfig },
+    0
+  )
+  createDataLakeVariable(
+    { id: 'camera-zoom-increase', name: i18n.global.t('Camera Zoom Increase'), ...commonVariableConfig },
+    0
+  )
 
-  for (const { id, nameKey, defaultValue } of cameraVariables) {
-    const name = i18n.global.t(nameKey)
-    const existing = getDataLakeVariableInfo(id)
-    if (existing) {
-      if (existing.name !== name) updateDataLakeVariableInfo({ ...existing, name })
-    } else {
-      createDataLakeVariable({ id, name, ...commonVariableConfig }, defaultValue)
-    }
-  }
+  // Initialize camera focus variables
+  createDataLakeVariable(
+    { id: 'camera-focus-decrease', name: i18n.global.t('Camera Focus Decrease'), ...commonVariableConfig },
+    0
+  )
+  createDataLakeVariable(
+    { id: 'camera-focus-increase', name: i18n.global.t('Camera Focus Increase'), ...commonVariableConfig },
+    0
+  )
 
   // Initialize camera zoom transforming function
   try {
-    const func = getAllTransformingFunctions().find((f) => f.id === 'camera-zoom')
-    const zoomName = i18n.global.t('Camera Zoom')
-    if (!func) {
-      createTransformingFunction(
-        'camera-zoom',
-        zoomName,
-        'number',
-        getUnindentedString(`
-          const zoom = ({{camera-zoom-increase}} - {{camera-zoom-decrease}}) * {{camera-zoom-speed}}
-          return zoom < 0.05 && zoom > -0.05 ? 0 : Math.max(Math.min(1, zoom), -1)
-        `),
-        'Used to control the camera zoom. The value is the difference between {{camera-zoom-increase}} and {{camera-zoom-decrease}}, multiplied by {{camera-zoom-speed}}.'
-      )
-    } else if (func.name !== zoomName) {
-      updateTransformingFunction({ ...func, name: zoomName })
-    }
+    ensureCockpitTransformingFunction({
+      id: 'camera-zoom',
+      name: i18n.global.t('Camera Zoom'),
+      type: 'number',
+      expression: getUnindentedString(`
+        const zoom = {{camera-zoom-increase}} - {{camera-zoom-decrease}}
+        return zoom < 0.05 && zoom > -0.05 ? 0 : Math.max(Math.min(1, zoom), -1)
+      `),
+      description:
+        'Used to control the camera zoom. The value is the difference between {{camera-zoom-increase}} and {{camera-zoom-decrease}}.',
+      allowUserToChangeValue: true,
+    })
   } catch (error) {
     console.error('Error creating camera zoom transforming function:', error)
   }
 
   // Initialize camera focus transforming function
   try {
-    const func = getAllTransformingFunctions().find((f) => f.id === 'camera-focus')
-    const focusName = i18n.global.t('Camera Focus')
-    if (!func) {
-      createTransformingFunction(
-        'camera-focus',
-        focusName,
-        'number',
-        getUnindentedString(`
-          const focus = ({{camera-focus-increase}} - {{camera-focus-decrease}}) * {{camera-focus-speed}}
-          return focus < 0.05 && focus > -0.05 ? 0 : Math.max(Math.min(1, focus), -1)
-        `),
-        'Used to control the camera focus. The value is the difference between {{camera-focus-increase}} and {{camera-focus-decrease}}, multiplied by {{camera-focus-speed}}.'
-      )
-    } else if (func.name !== focusName) {
-      updateTransformingFunction({ ...func, name: focusName })
-    }
+    ensureCockpitTransformingFunction({
+      id: 'camera-focus',
+      name: i18n.global.t('Camera Focus'),
+      type: 'number',
+      expression: getUnindentedString(`
+        const focus = {{camera-focus-increase}} - {{camera-focus-decrease}}
+        return focus < 0.05 && focus > -0.05 ? 0 : Math.max(Math.min(1, focus), -1)
+      `),
+      description:
+        'Used to control the camera focus. The value is the difference between {{camera-focus-increase}} and {{camera-focus-decrease}}.',
+      allowUserToChangeValue: true,
+    })
   } catch (error) {
     console.error('Error creating camera focus transforming function:', error)
   }
@@ -186,16 +170,14 @@ const setupJoystickAxesResources = (): void => {
     createDataLakeVariable({ id: axis.inputId, name: axis.name, ...commonVariableConfig }, 0)
 
     try {
-      const existing = getAllTransformingFunctions().find((f) => f.id === axis.outputId)
-      if (!existing) {
-        createTransformingFunction(
-          axis.outputId,
-          `${axis.name} Output`,
-          'number',
-          `{{${axis.inputId}}}`,
-          `Output value for MANUAL_CONTROL ${axis.name}.`
-        )
-      }
+      ensureCockpitTransformingFunction({
+        id: axis.outputId,
+        name: `${axis.name} Output`,
+        type: 'number',
+        expression: `{{${axis.inputId}}}`,
+        description: `Output value for MANUAL_CONTROL ${axis.name}.`,
+        allowUserToChangeValue: true,
+      })
     } catch (error) {
       console.error(`Error creating transforming function for ${axis.name}:`, error)
     }

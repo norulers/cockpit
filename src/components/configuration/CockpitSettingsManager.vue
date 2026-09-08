@@ -696,13 +696,19 @@ const localStorageValueToString = (value: any): string => {
   return JSON.stringify(value)
 }
 
+// Suppresses per-setting change logs while a whole config file is being applied, so an import emits one
+// summary line instead of one line per changed key.
+let isApplyingImportedConfig = false
+
 const commitChanges = async (item: SettingsRow): Promise<void> => {
   if (saving[item.originalKey]) return
 
   const editedValue = editedValues[item.originalKey]
 
   const previousValue = userSettings.value[item.originalKey]
-
+  // The settings manager persists a value-less setting as `null`, so the wait below and the row have to
+  // expect what it stored rather than what it was handed.
+  const committedValue = item.source === 'v2' ? editedValue ?? null : editedValue
   saving[item.originalKey] = true
 
   try {
@@ -720,9 +726,7 @@ const commitChanges = async (item: SettingsRow): Promise<void> => {
 
         selectedVehicleId.value
       )
-
-      await waitForV2ValueToPersist(item.v2SettingKey, editedValue, selectedUserId.value, selectedVehicleId.value)
-
+      await waitForV2ValueToPersist(item.v2SettingKey, committedValue, selectedUserId.value, selectedVehicleId.value)
       loadUserSettings()
     } else {
       localStorage.setItem(item.storageKey, localStorageValueToString(editedValue))
@@ -731,8 +735,8 @@ const commitChanges = async (item: SettingsRow): Promise<void> => {
     }
 
     editing[item.originalKey] = false
-
-    userSettings.value[item.originalKey] = editedValue
+    userSettings.value[item.originalKey] = committedValue
+    if (!isApplyingImportedConfig) logUserAction(`Changed setting '${displaySettingName(item)}'`)
   } catch (error: any) {
     editedValues[item.originalKey] = previousValue
 
@@ -848,13 +852,21 @@ const uploadConfigFile = (): void => {
           return
         }
 
-        for (const row of settingsArray.value) {
-          if (!(row.setting in json)) continue
+        isApplyingImportedConfig = true
 
-          editedValues[row.originalKey] = json[row.setting]
+        try {
+          for (const row of settingsArray.value) {
+            if (!(row.setting in json)) continue
 
-          await commitChanges(row)
+            editedValues[row.originalKey] = json[row.setting]
+
+            await commitChanges(row)
+          }
+        } finally {
+          isApplyingImportedConfig = false
         }
+
+        logUserAction('Imported Cockpit settings from file')
 
         openSnackbar({ message: t('Configuration file applied successfully.'), variant: 'success', duration: 5000 })
       } catch (error: any) {

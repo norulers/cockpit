@@ -497,6 +497,7 @@ declare global {
        * @returns Promise resolving when menu is updated
        */
       updateMenuLanguage: (locale: string) => Promise<void>
+      /**
        * Whether the bundled Piper synthesizer is available for offline alert speech
        * @returns {Promise<boolean>} True when the runtime and the default voice are present
        */

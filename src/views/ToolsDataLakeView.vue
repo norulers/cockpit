@@ -86,10 +86,21 @@
                       </div>
                     </td>
                     <td>
-                      <div class="flex items-center justify-center rounded-xl mx-1">
+                      <div class="flex items-center justify-center gap-1 rounded-xl mx-1">
                         <p class="w-[70px] whitespace-nowrap overflow-hidden text-ellipsis text-center">
                           {{ item.type }}
                         </p>
+                        <div class="w-[16px] shrink-0">
+                          <v-tooltip
+                            v-if="isCompoundVariable(item.id)"
+                            location="top"
+                            text="Compound variable: its value is calculated from an expression"
+                          >
+                            <template #activator="{ props: tooltipProps }">
+                              <span v-bind="tooltipProps" class="mdi mdi-function-variant text-gray-400" />
+                            </template>
+                          </v-tooltip>
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -109,7 +120,7 @@
                     <td>
                       <div class="flex items-center justify-end h-[42px] gap-1 -mr-2">
                         <v-btn
-                          v-if="isCompoundVariable(item.id)"
+                          v-if="isCompoundVariable(item.id) && canEditVariable(item.id)"
                           variant="outlined"
                           class="rounded-full"
                           icon="mdi-pencil"
@@ -117,15 +128,15 @@
                           @click="editCompoundVariable(item.id)"
                         />
                         <v-btn
-                          v-if="isUserDefinedVariable(item.id)"
+                          v-if="!isCompoundVariable(item.id) && canEditVariable(item.id)"
                           variant="outlined"
                           class="rounded-full"
                           icon="mdi-pencil"
                           size="x-small"
-                          @click="editUserDefinedVariable(item.id)"
+                          @click="editVariable(item.id)"
                         />
                         <v-btn
-                          v-if="isCompoundVariable(item.id) || isUserDefinedVariable(item.id)"
+                          v-if="canDeleteVariable(item.id)"
                           variant="outlined"
                           color="error"
                           class="rounded-full"
@@ -201,10 +212,16 @@ import {
 import {
   deleteTransformingFunction,
   getAllTransformingFunctions,
+  isCompoundDataLakeVariable,
   TransformingFunction,
 } from '@/libs/actions/data-lake-transformations'
 import { dataLakeLogger } from '@/libs/data-lake-logging'
 import { copyToClipboard } from '@/libs/utils'
+import {
+  canUserChangeDataLakeVariable,
+  canUserDeleteDataLakeVariable,
+  isSystemOwnedDataLakeVariable,
+} from '@/libs/utils-data-lake'
 import { useAppInterfaceStore } from '@/stores/appInterface'
 
 import BaseConfigurationView from './BaseConfigurationView.vue'
@@ -212,7 +229,7 @@ import BaseConfigurationView from './BaseConfigurationView.vue'
 const { t } = useI18n()
 const interfaceStore = useAppInterfaceStore()
 
-type VariableSource = 'Compound' | 'Cockpit internal' | 'User defined'
+type VariableSource = 'Cockpit internal' | 'User defined'
 
 /**
  * DataLakeVariable with source type
@@ -331,15 +348,7 @@ const searchQuery = ref('')
  * @returns {VariableSource} Source type
  */
 const getVariableSource = (id: string): VariableSource => {
-  if (isCompoundVariable(id)) {
-    return 'Compound'
-  }
-
-  if (isUserDefinedVariable(id)) {
-    return 'User defined'
-  }
-
-  return 'Cockpit internal'
+  return isSystemOwnedDataLakeVariable(id) ? 'Cockpit internal' : 'User defined'
 }
 
 /**
@@ -369,12 +378,16 @@ const filteredVariables = computed<DataLakeVariableWithSource[]>(() => {
 
   if (!throttledSearchQuery.value) return variables
 
+  const query = throttledSearchQuery.value.toLowerCase()
+
   return variables.filter((v) => {
     return (
-      v.name.toLowerCase().includes(throttledSearchQuery.value.toLowerCase()) ||
-      (v.description && v.description.toLowerCase().includes(throttledSearchQuery.value.toLowerCase())) ||
-      v.id.toLowerCase().includes(throttledSearchQuery.value.toLowerCase()) ||
-      v.source.toLowerCase().includes(throttledSearchQuery.value.toLowerCase())
+      v.name.toLowerCase().includes(query) ||
+      (v.description && v.description.toLowerCase().includes(query)) ||
+      v.id.toLowerCase().includes(query) ||
+      v.source.toLowerCase().includes(query) ||
+      // Searchable by the word the table no longer shows, since the "Add compound variable" button teaches it.
+      (isCompoundVariable(v.id) && 'compound'.startsWith(query))
     )
   })
 })
@@ -408,16 +421,16 @@ const openNewVariableDialog = (): void => {
 }
 
 /**
- * Opens the dialog to edit an existing variable
+ * Opens the dialog to edit a user-defined or user-editable variable
  * @param {string} variableId The ID of the variable to edit
  */
-const editUserDefinedVariable = (variableId: string): void => {
+const editVariable = (variableId: string): void => {
   const variable = availableDataLakeVariables.value.find((v) => v.id === variableId)
-  if (variable && isUserDefinedVariable(variableId)) {
+  if (variable && canEditVariable(variableId)) {
     logUserAction(`Opened edit dialog for data-lake variable '${variableId}'`)
     idVariableBeingEdited = variableId
     showVariableDialog.value = true
-  } else if (variable && !isUserDefinedVariable(variableId)) {
+  } else if (variable) {
     openSnackbar({ message: t("Variable '{id}' is not editable", { id: variableId }), variant: 'error' })
   } else {
     openSnackbar({ message: t("Variable '{id}' was not found", { id: variableId }), variant: 'error' })
@@ -437,17 +450,20 @@ const handleVariableSaved = (): void => {
  * @param {string} id Variable ID
  */
 const deleteVariable = (id: string): void => {
+  if (!canDeleteVariable(id)) {
+    openSnackbar({ message: t("Variable '{id}' cannot be deleted", { id }), variant: 'error' })
+    return
+  }
+
   if (isCompoundVariable(id)) {
     const func = getAllTransformingFunctions().find((f) => f.id === id)
     if (func) {
       logUserAction(`Deleted compound variable '${id}'`)
       deleteTransformingFunction(func)
     }
-  } else if (isUserDefinedVariable(id)) {
+  } else {
     logUserAction(`Deleted data-lake variable '${id}'`)
     deleteDataLakeVariable(id)
-  } else {
-    openSnackbar({ message: t("Variable '{id}' cannot be deleted", { id }), variant: 'error' })
   }
 }
 
@@ -456,14 +472,23 @@ const showNewFunctionDialog = ref(false)
 const functionBeingEdited = ref<TransformingFunction | undefined>(undefined)
 
 const isCompoundVariable = (id: string): boolean => {
-  return getAllTransformingFunctions().some((func) => func.id === id)
+  return isCompoundDataLakeVariable(id)
 }
 
-const isUserDefinedVariable = (id: string): boolean => {
-  return availableDataLakeVariables.value.find((v) => v.id === id)?.persistent != null
+const canDeleteVariable = (id: string): boolean => {
+  return canUserDeleteDataLakeVariable(id)
+}
+
+const canEditVariable = (id: string): boolean => {
+  return canUserChangeDataLakeVariable(id)
 }
 
 const editCompoundVariable = (id: string): void => {
+  if (!canEditVariable(id)) {
+    openSnackbar({ message: `Variable with ID ${id} is not editable`, variant: 'error' })
+    return
+  }
+
   const func = getAllTransformingFunctions().find((f) => f.id === id)
   if (func) {
     logUserAction(`Opened edit dialog for compound variable '${id}'`)

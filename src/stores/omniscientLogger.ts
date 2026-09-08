@@ -11,6 +11,7 @@ import {
 } from '@/libs/actions/data-lake'
 import eventTracker from '@/libs/external-telemetry/event-tracking'
 import { isElectron } from '@/libs/utils'
+import { monitorStreamPeerConnection } from '@/libs/webrtc/stats'
 import i18n from '@/plugins/i18n'
 import { WebRTCStatsEvent, WebRTCVideoStat } from '@/types/video'
 
@@ -40,38 +41,38 @@ export const useOmniscientLoggerStore = defineStore('omniscient-logger', () => {
     // Separate memory metrics for different process types
     cockpitMainMemoryVariable = {
       id: 'cockpit-main-memory',
-      name: i18n.global.t('Cockpit Main Memory (Standalone)'),
+      name: i18n.global.t('Cockpit Main Memory (standalone)'),
       type: 'number',
       description:
-        'The memory usage of the main process in the standalone Cockpit application, in MB. This value is updated every 100ms. Only available in Electron.',
+        'The memory usage of the main process, in MB. This value is updated every 100ms. Only available in standalone application.',
     } as DataLakeVariable
     createDataLakeVariable(cockpitMainMemoryVariable)
 
     cockpitRenderersMemoryVariable = {
       id: 'cockpit-renderers-memory',
-      name: i18n.global.t('Cockpit Renderers Memory (Standalone)'),
+      name: i18n.global.t('Cockpit Renderers Memory (standalone)'),
       type: 'number',
       description:
-        'The total memory usage of the renderer processes in the standalone Cockpit application, in MB. This value is updated every 100ms. Only available in Electron.',
+        'The total memory usage of the renderer processes, in MB. This value is updated every 100ms. Only available in standalone application.',
     } as DataLakeVariable
     createDataLakeVariable(cockpitRenderersMemoryVariable)
 
     cockpitGpuMemoryVariable = {
       id: 'cockpit-gpu-memory',
-      name: i18n.global.t('Cockpit GPU Memory (Standalone)'),
+      name: i18n.global.t('Cockpit GPU Memory (standalone)'),
       type: 'number',
       description:
-        'The memory usage of the GPU in the standalone Cockpit application, in MB. This value is updated every 100ms. Only available in Electron.',
+        'The memory usage of the GPU, in MB. This value is updated every 100ms. Only available in standalone application.',
     } as DataLakeVariable
     createDataLakeVariable(cockpitGpuMemoryVariable)
 
     // CPU usage tracking
     cockpitCpuUsageVariable = {
       id: 'cockpit-cpu-usage',
-      name: i18n.global.t('Cockpit CPU Usage (Standalone)'),
+      name: i18n.global.t('Cockpit CPU Usage (standalone)'),
       type: 'number',
       description:
-        'The CPU usage of the standalone Cockpit application as a percentage. This value is updated every 100ms. Only available in Electron.',
+        'The CPU usage of Cockpit as a percentage. This value is updated every 100ms. Only available in standalone application.',
     } as DataLakeVariable
     createDataLakeVariable(cockpitCpuUsageVariable)
   }
@@ -190,21 +191,16 @@ export const useOmniscientLoggerStore = defineStore('omniscient-logger', () => {
   // Monitor the active streams to add the connections to the WebRTC statistics
   watch(videoStore.activeStreams, (streams) => {
     Object.keys(streams).forEach((streamName) => {
-      const session = streams[streamName]?.webRtcManager?.session
-      if (!session || !session.peerConnection) return
+      const pcInfo = videoStore.getStreamPeerConnection(streamName)
+      if (!pcInfo) return
 
       if (webrtcStreamStats[streamName] === undefined) {
         webrtcStreamStats[streamName] = new WebRTCStats({ getStatsInterval: 100 })
       }
 
-      if (webrtcStreamStats[streamName].peersToMonitor[session.consumerId]) return
+      if (webrtcStreamStats[streamName].peersToMonitor[pcInfo.peerId]) return
 
-      webrtcStreamStats[streamName].addConnection({
-        pc: session.peerConnection, // RTCPeerConnection instance
-        peerId: session.consumerId, // any string that helps you identify this peer,
-        connectionId: session.id, // optional, an id that you can use to keep track of this connection
-        remote: false, // optional, override the global remote flag
-      })
+      monitorStreamPeerConnection(webrtcStreamStats[streamName], pcInfo)
 
       storedKeys.forEach((key) => {
         if (getDataLakeVariableInfo(streamRateVariableId(streamName, key)) === undefined) {
@@ -223,6 +219,9 @@ export const useOmniscientLoggerStore = defineStore('omniscient-logger', () => {
 
       webrtcStreamStats[streamName].on('stats', (ev: WebRTCStatsEvent) => {
         try {
+          // Stats for a peer we no longer monitor describe a connection that has already been replaced
+          if (!webrtcStreamStats[streamName].peersToMonitor[ev.peerId]) return
+
           const videoData = ev.data.video.inbound[0]
           if (videoData === undefined) return
 

@@ -183,7 +183,7 @@ export const setKeyDataOnCockpitVehicleStorage = async (
 
 /* eslint-disable jsdoc/require-jsdoc */
 type RawIpInfo = { ip: string; service_type: string; interface_type: string }
-type IpInfo = { ipv4Address: string; interfaceType: string }
+export type IpInfo = { ipv4Address: string; interfaceType: string }
 
 type StreamConfiguration = {
   type: string
@@ -246,6 +246,13 @@ export const getIpsInformationFromVehicle = async (vehicleAddress: string): Prom
     throw new Error(`Could not get information about IPs on BlueOS. ${error}`)
   }
 }
+
+/**
+ * Tells if an interface type reported by the beacon means the vehicle is reached through a cable.
+ * @param {string} interfaceType Interface type as reported by the beacon service.
+ * @returns {boolean} True for wired and USB interfaces.
+ */
+export const isTetheredInterfaceType = (interfaceType: string): boolean => ['WIRED', 'USB'].includes(interfaceType)
 
 /* eslint-disable jsdoc/require-jsdoc */
 type RawM2rServiceInfo = { name: string; version: string; sha: string; build_date: string; authors: string }
@@ -329,12 +336,39 @@ export const getCpusInfo = async (vehicleAddress: string): Promise<RawCpuLoadInf
   }
 }
 
+/**
+ * Tells if a vehicle network interface is a wireless one, judging by the naming convention BlueOS follows.
+ * @param {string} interfaceName Name of the vehicle network interface.
+ * @returns {boolean} True for wireless interfaces.
+ */
+export const isWirelessInterfaceName = (interfaceName: string): boolean => interfaceName.includes('wlan')
+
+const isCabledInterfaceName = (interfaceName: string): boolean => interfaceName.includes('eth')
+
+const minCounterSpanMs = 6000
+
+/**
+ * Turns the progress of one of the vehicle's byte counters into a transfer rate.
+ * The vehicle refreshes those counters slower than Cockpit polls them, so the span has to cover several
+ * refreshes to mean anything: a poll-to-poll delta reads zero most of the time and spikes on the polls that
+ * catch a refresh, on an idle interface just as much as on a busy one.
+ * @param {number} deltaBytes How far the counter moved across the span.
+ * @param {number} spanMs Time the span covers, in milliseconds.
+ * @returns {number} The rate in Mbps, and zero for a span too short to cover a refresh or for a counter reset by a vehicle reboot.
+ */
+export const counterDeltaToMbps = (deltaBytes: number, spanMs: number): number => {
+  if (spanMs < minCounterSpanMs || deltaBytes < 0) return 0
+  return (deltaBytes * 8) / (1024 * 1024) / (spanMs / 1000)
+}
+
 export const getNetworkInfo = async (vehicleAddress: string): Promise<RawNetworkInfo[]> => {
   try {
     const url = `${protocol}//${vehicleAddress}/system-information/system/network`
     const networkRawInfo: RawNetworkInfo[] = await ky.get(url, { timeout: defaultTimeout }).json()
     return networkRawInfo.filter((network) => {
-      return (network.name.includes('wlan') || network.name.includes('eth')) && !network.name.startsWith('v')
+      return (
+        (isWirelessInterfaceName(network.name) || isCabledInterfaceName(network.name)) && !network.name.startsWith('v')
+      )
     })
   } catch (error) {
     throw new Error(`Could not get network information from BlueOS. ${error}`)

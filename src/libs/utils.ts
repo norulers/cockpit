@@ -172,6 +172,10 @@ export const reloadCockpit = (timeout = 3000): void => {
 
 /**
  * Detects if the application is running in Electron
+ *
+ * In the renderer the user agent alone is not enough: Electron-based embedded browsers, like the preview
+ * panes of Electron-based IDEs, carry the same `Electron/<version>` token but never run our preload
+ * script, so the bridge it exposes is what tells our own shell apart from them.
  * @returns {boolean} True if running in Electron, false otherwise
  */
 export const isElectron = (): boolean => {
@@ -179,7 +183,7 @@ export const isElectron = (): boolean => {
   // Must also verify electronAPI is available — some embedded browsers (e.g. VS Code)
   // run on Electron but don't have Cockpit's electronAPI preload.
   if (typeof navigator === 'object' && typeof navigator.userAgent === 'string') {
-    return navigator.userAgent.toLowerCase().includes('electron') && typeof window.electronAPI !== 'undefined'
+    return navigator.userAgent.toLowerCase().includes('electron') && globalThis.window?.electronAPI !== undefined
   }
 
   // Check if the process object exists and contains 'electron' (for main process)
@@ -474,4 +478,24 @@ export const serializeForLogging = (value: unknown): string => {
   } catch {
     return ''
   }
+}
+
+/**
+ * Opens the browser's file picker and resolves with the files the user chose. Uses a hidden file input so it
+ * behaves identically in Standalone (Electron) and Lite (Web), where the bytes are read in-renderer.
+ * @param {string} accept - Value for the input's `accept` attribute, e.g. `.zip,.mbtiles,.pmtiles`.
+ * @param {boolean} multiple - Whether more than one file can be picked at once.
+ * @returns {Promise<File[]>} The selected files, or an empty array if the dialog was dismissed.
+ */
+export const pickFilesFromDisk = (accept: string, multiple = true): Promise<File[]> => {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = accept
+    input.multiple = multiple
+    input.onchange = (event: Event): void => resolve(Array.from((event.target as HTMLInputElement).files ?? []))
+    // A cancelled dialog never fires `change`; resolve empty so callers don't hang.
+    input.oncancel = (): void => resolve([])
+    input.click()
+  })
 }

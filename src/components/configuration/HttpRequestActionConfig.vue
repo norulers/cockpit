@@ -171,7 +171,8 @@
             class="mt-2"
           >
             <div class="text-body-2">
-              {{ $t('Note: Specifying the User-Agent header only works in Cockpit Standalone, not in Cockpit Lite.') }}
+              <strong>{{ $t('Note:') }}</strong>
+              {{ $t('Specifying the User-Agent header only works in Cockpit Standalone, not in Cockpit Lite.') }}
             </div>
           </v-alert>
         </v-form>

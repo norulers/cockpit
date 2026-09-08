@@ -150,21 +150,44 @@
                 </template>
                 <template #bottom></template>
               </v-data-table>
-              <div class="flex items-center justify-start">
-                <v-checkbox
-                  v-model="showIgnoredStreams"
-                  :label="$t('Show ignored streams')"
-                  hide-details
-                  class="text-sm"
-                />
-                <span v-if="ignoredStreamExternalIds.length > 0" class="text-gray-400 text-sm ml-2">
-                  ({{ ignoredStreamExternalIds.length }} ignored)
+              <div class="flex items-center justify-between w-[95%]">
+                <div class="flex items-center justify-start">
+                  <v-checkbox
+                    v-model="showIgnoredStreams"
+                    :label="$t('Show ignored streams')"
+                    hide-details
+                    class="text-sm"
+                  />
+                  <span v-if="ignoredStreamExternalIds.length > 0" class="text-gray-400 text-sm ml-2">
+                    ({{ ignoredStreamExternalIds.length }} ignored)
+                  </span>
+                </div>
+                <div class="flex items-center justify-end">
+                  <v-checkbox
+                    v-model="videoStore.broadcastCameraActionsOverMavlink"
+                    label="Broadcast camera actions over MAVLink"
+                    class="text-sm mx-2"
+                    hide-details
+                    @update:model-value="handleBroadcastCameraActionsUpdate"
+                  />
+                  <v-tooltip
+                    text="Send MAVLink camera commands when recording or taking a snapshot, so systems like BlueOS can mirror the action (e.g. start in-vehicle recording)"
+                  >
+                    <template #activator="{ props }">
+                      <v-icon v-bind="props" size="small" color="white" class="ml-2">mdi-information-outline</v-icon>
+                    </template>
+                  </v-tooltip>
+                </div>
+              </div>
+              <div v-if="show4kCamBrowserNote" class="text-gray-400 text-sm mt-2 mr-2 w-[95%]">
+                The video from your 4K camera may stutter in this browser version of Cockpit. The desktop version plays
+                this camera through its own connection, which is smoother — install it if the stuttering bothers you.
+                <span v-if="videoStore.hasDisregarded4kCamIgnore">
+                  If you had hidden this camera before, it is showing again: hide it once more and it will stay hidden.
                 </span>
               </div>
               <div v-if="isElectron()" class="mt-4 mr-2 mb-2 w-[95%]">
-                <div class="text-sm text-gray-300 mb-2">
-                  {{ $t('Add direct RTSP stream (Standalone)') }}
-                </div>
+                <div class="text-sm text-gray-300 mb-2">{{ $t('Add direct RTSP stream (standalone)') }}</div>
                 <div class="flex items-end gap-2 w-full">
                   <v-text-field
                     v-model="rtspUrlInput"
@@ -275,26 +298,93 @@
         <ExpansiblePanel no-bottom-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
           <template #title>{{ $t('Video library options:') }}</template>
           <template #info>
-            {{
-              $t(
-                'Configure live video processing to process videos in real-time during recording for instant availability when recording stops. This is only available in Cockpit Standalone.'
-              )
-            }}
-            <br /><br />
-            {{
-              $t(
-                'Choose whether to save backup raw chunks alongside the final video file. This provides safety for video reconstruction if something goes wrong, but uses approximately double the storage space.'
-              )
-            }}
-            <br /><br />
-            {{
-              $t(
-                'Select whether video and subtitle files should be bundled together in a ZIP archive, or downloaded individually. Zipping allows a single download of a group of files, but requires waiting for the files to get zipped together. Depending on file sizes, the zipping process may complete within seconds or could take minutes.'
-              )
-            }}
+            <li>
+              {{
+                $t(
+                  'Configure live video processing to process videos in real-time during recording for instant availability when recording stops. This is only available in Cockpit standalone.'
+                )
+              }}
+            </li>
+            <li>
+              {{
+                $t(
+                  'Choose whether to save backup raw chunks alongside the final video file. This provides safety for video reconstruction if something goes wrong, but uses approximately double the storage space.'
+                )
+              }}
+            </li>
+            <li>
+              {{
+                $t(
+                  'Select whether video and subtitle files should be bundled together in a ZIP archive, or downloaded individually. Zipping allows a single download of a group of files, but requires waiting for the files to get zipped together. Depending on file sizes, the zipping process may complete within seconds or could take minutes.'
+                )
+              }}
+            </li>
           </template>
           <template #content>
-            <div class="flex items-center justify-end w-[96%] ml-2 mb-4">
+            <div class="flex items-start justify-between w-[96%] ml-2 mb-2">
+              <div class="flex flex-col">
+                <div class="flex items-center justify-start">
+                  <v-checkbox
+                    v-model="videoStore.enableLiveProcessing"
+                    label="Live video processing (standalone)"
+                    class="text-sm mx-2"
+                    hide-details
+                    :disabled="!isElectron()"
+                  />
+                  <v-tooltip
+                    :text="
+                      isElectron()
+                        ? 'Process videos in real-time during recording for instant availability when recording stops'
+                        : 'Live video processing is only available in Cockpit standalone'
+                    "
+                  >
+                    <template #activator="{ props }">
+                      <v-icon v-bind="props" class="ml-2 text-slate-400">mdi-information-outline</v-icon>
+                    </template>
+                  </v-tooltip>
+                </div>
+
+                <div class="flex items-center justify-start">
+                  <v-checkbox
+                    v-model="videoStore.keepRawVideoChunksAsBackup"
+                    label="Save backup raw chunks"
+                    class="text-sm mx-2"
+                    :disabled="!isElectron()"
+                    hide-details
+                  />
+                  <v-tooltip max-width="400px">
+                    <template #activator="{ props }">
+                      <v-icon v-bind="props" class="ml-2 text-slate-400">mdi-information-outline</v-icon>
+                    </template>
+                    <div class="text-sm">
+                      <p class="mb-2">Save the raw video chunks alongside the final video file for backup purposes.</p>
+                      <p class="mb-2">
+                        <strong>Enabled:</strong> Raw chunks are preserved after recording. Videos use ~2x storage space
+                        but provide safety for reconstruction if the final video is corrupted.
+                      </p>
+                      <p>
+                        <strong>Disabled:</strong> Raw chunks are automatically deleted after successful processing,
+                        using minimal storage space.
+                      </p>
+                      <p class="mt-2 text-gray-300">
+                        You can always manually clean up backup chunks later using the "Temporary" tab in the Video
+                        Library.
+                      </p>
+                      <p class="mt-2 text-gray-300">In Cockpit Lite the chunks are always saved by default.</p>
+                    </div>
+                  </v-tooltip>
+                </div>
+
+                <div class="flex items-center justify-start">
+                  <v-checkbox
+                    v-model="snapshotStore.zipMultipleFiles"
+                    label="Zip multiple files"
+                    class="text-sm mx-2"
+                    hide-details
+                  />
+                </div>
+              </div>
+
               <v-btn variant="flat" class="bg-[#FFFFFF22] px-3 elevation-1" @click="openVideoLibrary">
                 <template #append>
                   <v-divider vertical></v-divider>
@@ -318,85 +408,12 @@
                   <p class="text-amber-100 text-sm">
                     {{
                       $t(
-                        'Video processing is not available in Cockpit Lite. Your recordings will be saved as raw chunks that can be downloaded and processed using Cockpit Standalone.'
+                        'Video processing is not available in Cockpit Lite. Your recordings will be saved as raw chunks that can be downloaded and processed using Cockpit standalone.'
                       )
                     }}
                   </p>
                 </div>
               </div>
-            </div>
-
-            <div class="flex items-center justify-start w-[96%] ml-2">
-              <v-checkbox
-                v-model="videoStore.enableLiveProcessing"
-                :label="$t('Live video processing (Standalone)')"
-                class="text-sm mx-2"
-                hide-details
-                :disabled="!isElectron()"
-              />
-              <v-tooltip
-                :text="
-                  isElectron()
-                    ? $t('Process videos in real-time during recording for instant availability when recording stops')
-                    : $t('Live video processing is only available in Cockpit Standalone')
-                "
-              >
-                <template #activator="{ props }">
-                  <v-icon v-bind="props" class="ml-2 text-slate-400">mdi-information-outline</v-icon>
-                </template>
-              </v-tooltip>
-            </div>
-
-            <div class="flex items-center justify-start w-[96%] ml-2">
-              <v-checkbox
-                v-model="videoStore.keepRawVideoChunksAsBackup"
-                :label="$t('Save backup raw chunks')"
-                class="text-sm mx-2"
-                :disabled="!isElectron()"
-                hide-details
-              />
-              <v-tooltip max-width="400px">
-                <template #activator="{ props }">
-                  <v-icon v-bind="props" class="ml-2 text-slate-400">mdi-information-outline</v-icon>
-                </template>
-                <div class="text-sm">
-                  <p class="mb-2">
-                    {{ $t('Save the raw video chunks alongside the final video file for backup purposes.') }}
-                  </p>
-                  <p class="mb-2">
-                    {{
-                      $t(
-                        'Enabled: Raw chunks are preserved after recording. Videos use ~2x storage space but provide safety for reconstruction if the final video is corrupted.'
-                      )
-                    }}
-                  </p>
-                  <p>
-                    {{
-                      $t(
-                        'Disabled: Raw chunks are automatically deleted after successful processing, using minimal storage space.'
-                      )
-                    }}
-                  </p>
-                  <p class="mt-2 text-gray-300">
-                    {{
-                      $t(
-                        'You can always manually clean up backup chunks later using the "Temporary" tab in the Video Library.'
-                      )
-                    }}
-                  </p>
-                  <p class="mt-2 text-gray-300">
-                    {{ $t('In Cockpit Lite the chunks are always saved by default.') }}
-                  </p>
-                </div>
-              </v-tooltip>
-            </div>
-            <div class="flex items-center justify-start w-[50%] ml-2">
-              <v-checkbox
-                v-model="snapshotStore.zipMultipleFiles"
-                :label="$t('Zip multiple files')"
-                class="text-sm mx-2"
-                hide-details
-              />
             </div>
           </template>
         </ExpansiblePanel>
@@ -539,6 +556,12 @@ const streamsToShow = computed(() => {
       : []),
   ].filter((item) => item.name !== '')
 })
+
+const show4kCamBrowserNote = computed(
+  () =>
+    !isElectron() &&
+    videoStore.streamsCorrespondency.some((corr) => videoStore.isBlueRobotics4kCamStreamName(corr.externalId))
+)
 
 const openEditDialog = (item: VideoStreamCorrespondency): void => {
   logUserAction(`Opened rename dialog for video stream '${item.name}'`)
@@ -714,6 +737,10 @@ function handleAllowedIpsUpdate(newValue: string[] | null): void {
 const openVideoLibrary = (): void => {
   logUserAction('Opened Video Library')
   interfaceStore.videoLibraryVisibility = true
+}
+
+const handleBroadcastCameraActionsUpdate = (value: boolean | null): void => {
+  logUserAction(`${value ? 'Enabled' : 'Disabled'} broadcasting camera actions over MAVLink`)
 }
 
 /**

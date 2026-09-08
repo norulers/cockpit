@@ -185,7 +185,6 @@
                   item-title="name"
                   density="compact"
                   variant="outlined"
-                  no-data-text="iframe"
                   :no-data-text="$t('iframe')"
                   hide-details
                   theme="dark"

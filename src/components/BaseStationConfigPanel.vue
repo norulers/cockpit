@@ -721,10 +721,11 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import ExpansiblePanel from '@/components/ExpansiblePanel.vue'
 import { confirmRemoveBaseStation, useBaseStation } from '@/composables/baseStation/useBaseStation'
 import { useInteractionDialog } from '@/composables/interactionDialog'
+import { goToMenuPage } from '@/composables/menuRouting'
 import { useBarsAwarePanelStyle } from '@/composables/useBarsAwarePanelStyle'
 import { bearingBetween, centroidOf, rangeAfterGainChange, rangeAfterTxPowerChange } from '@/libs/baseStation/coverage'
 import { isElectron } from '@/libs/utils'
-import { SubMenuComponentName, SubMenuName, useAppInterfaceStore } from '@/stores/appInterface'
+import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
 import { useMissionStore } from '@/stores/mission'
 import {
@@ -739,6 +740,7 @@ import {
   MobileCoverageProvider,
   RadioBaseStationKind,
 } from '@/types/baseStation'
+import { SubMenuComponentName } from '@/types/general'
 import type { WaypointCoordinates } from '@/types/mission'
 
 withDefaults(
@@ -881,10 +883,7 @@ const onGpsSourceChange = (event: Event): void => {
     // The native select keeps showing the picked entry, so put the real source back before navigating.
     select.value = store.gpsSource
     logUserAction('Opened the sources settings from the base station panel')
-    interfaceStore.isMainMenuVisible = true
-    interfaceStore.mainMenuCurrentStep = 2
-    interfaceStore.currentSubMenuName = SubMenuName.settings
-    interfaceStore.currentSubMenuComponentName = SubMenuComponentName.SettingsSources
+    goToMenuPage(SubMenuComponentName.SettingsSources)
     return
   }
   store.gpsSourceId = select.value

@@ -1,6 +1,7 @@
 import { type Ref, ref } from 'vue'
 import type { ComposerTranslation } from 'vue-i18n'
 
+import { actionDisplayName } from '@/libs/joystick/protocols/cockpit-actions'
 import { OtherProtocol } from '@/libs/joystick/protocols/other'
 import {
   type DefaultsEvaluation,
@@ -119,7 +120,7 @@ export const buildJoystickImportRows = (
       modifier: modKey,
       buttonKey: Number(btnKey),
       inputLabel: t('Button {button} ({modifier})', { button: btnKey, modifier: modKey }),
-      fromActionName: currentBtn?.action.name ?? t('Unassigned'),
+      fromActionName: currentBtn ? actionDisplayName(currentBtn.action) : t('Unassigned'),
       toActionName: defaultBtn.action.name,
     })
   }

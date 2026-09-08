@@ -1038,9 +1038,6 @@ const togglePirateMode = (): void => {
 const openExternalFeaturesModal = (): void => {
   logUserAction('Opened External Features dialog')
   interfaceStore.isMainMenuVisible = false
-  interfaceStore.mainMenuCurrentStep = 1
-  interfaceStore.currentSubMenuName = null
-  interfaceStore.currentSubMenuComponentName = null
   interfaceStore.isExternalFeaturesModalVisible = true
 }
 
@@ -1088,7 +1085,7 @@ const openCockpitFolder = (): void => {
     window.electronAPI?.openCockpitFolder()
   } else {
     openSnackbar({
-      message: t('This feature is only available in Cockpit Standalone.'),
+      message: t('This feature is only available in Cockpit standalone.'),
       duration: 3000,
       variant: 'error',
       closeButton: true,

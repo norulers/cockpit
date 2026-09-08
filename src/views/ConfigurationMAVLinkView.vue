@@ -47,7 +47,7 @@
             </div>
           </template>
         </ExpansiblePanel>
-        <ExpansiblePanel no-bottom-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
+        <ExpansiblePanel :is-expanded="!interfaceStore.isOnPhoneScreen">
           <template #title>{{ $t('Message intervals') }}</template>
           <template #info>
             <p>
@@ -222,6 +222,18 @@
             </div>
           </template>
         </ExpansiblePanel>
+        <ExpansiblePanel no-bottom-divider :is-expanded="!interfaceStore.isOnPhoneScreen">
+          <template #title>Flight mode names</template>
+          <template #info>
+            <p>
+              How each vehicle mode is named throughout Cockpit. The defaults are the names ArduPilot itself uses, and a
+              mode with no name of its own is shown exactly as the vehicle reports it.
+            </p>
+          </template>
+          <template #content>
+            <FlightModeNamesConfig />
+          </template>
+        </ExpansiblePanel>
       </div>
     </template>
   </BaseConfigurationView>
@@ -231,6 +243,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import FlightModeNamesConfig from '@/components/configuration/FlightModeNamesConfig.vue'
 import ExpansiblePanel from '@/components/ExpansiblePanel.vue'
 import { MAVLinkType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
 import type { MessageIntervalOptions } from '@/libs/vehicle/mavlink/types'

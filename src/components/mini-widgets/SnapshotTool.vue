@@ -78,7 +78,7 @@
           </template>
 
           <span>{{
-            $t('Some features like "Capturing Cockpit work area" are only available in Cockpit Standalone.')
+            $t('Some features like “Capturing Cockpit work area” are only available in Cockpit standalone.')
           }}</span>
         </v-tooltip>
       </div>
@@ -156,7 +156,7 @@
           @update:model-value="(val) => (miniWidget.options.captureWorkspace = val)"
         />
         <p class="ml-[4px] -mb-[2px] text-sm" :class="{ 'opacity-20 pointer-events-none': !isElectronEnv }">
-          {{ $t('Capture Cockpit work area (Standalone-only feature)') }}
+          {{ $t('Capture Cockpit work area (standalone-only feature)') }}
         </p>
       </div>
       <v-text-field

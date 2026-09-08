@@ -1,6 +1,6 @@
 import { useWindowSize } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 
 import { defaultDisplayUnitPreferences } from '@/assets/defaults'
 import { useBlueOsStorage } from '@/composables/settingsSyncer'
@@ -8,44 +8,12 @@ import { setupPostPiniaConnection } from '@/libs/post-pinia-connections'
 
 const { width: windowWidth, height: windowHeight } = useWindowSize()
 
-/**
- * Available sub menus names
- */
-export enum SubMenuName {
-  settings = 'settings',
-  tools = 'tools',
-}
-
-/**
- * Available sub menus names
- */
-export enum SubMenuComponentName {
-  SettingsGeneral = 'settings-general',
-  SettingsInterface = 'settings-interface',
-  SettingsJoystick = 'settings-joystick',
-  SettingsVideo = 'settings-video',
-  SettingsTelemetry = 'settings-telemetry',
-  SettingsAlerts = 'settings-alerts',
-  SettingsDev = 'settings-dev',
-  SettingsCloud = 'settings-cloud',
-  SettingsMission = 'settings-mission',
-  SettingsActions = 'settings-actions',
-  SettingsSources = 'settings-sources',
-  SettingsDataLake = 'settings-datalake',
-  SettingsMAVLink = 'settings-mavlink',
-  ToolsMAVLink = 'tools-mavlink',
-  ToolsDataLake = 'tools-datalake',
-  ToolsLogs = 'tools-logs',
-  ToolsMap = 'tools-map',
-}
-
 export const useAppInterfaceStore = defineStore('responsive', {
   state: () => ({
     pirateMode: useBlueOsStorage('cockpit-pirate-mode', false),
     showSkullAnimation: false,
     width: windowWidth.value,
     height: windowHeight.value,
-    configModalVisibility: false,
     videoLibraryVisibility: false,
     videoLibraryMode: 'videos',
     missionLibraryVisibility: false,
@@ -60,8 +28,6 @@ export const useAppInterfaceStore = defineStore('responsive', {
     componentToHighlight: 'none',
     isMainMenuVisible: false,
     mainMenuCurrentStep: 1,
-    currentSubMenuName: ref<SubMenuName | null>(null),
-    currentSubMenuComponentName: ref<SubMenuComponentName | null>(null),
     isGlassModalAlwaysOnTop: false,
     isTutorialVisible: false,
     isExternalFeaturesModalVisible: false,
@@ -72,6 +38,9 @@ export const useAppInterfaceStore = defineStore('responsive', {
     userHasSeenTutorial: useBlueOsStorage('cockpit-has-seen-tutorial', false),
     configPanelVisible: false,
     showSplashScreen: true,
+    // One-shot request (consumed on mount) asking the Sources config view to expand its "Custom map providers"
+    // panel, e.g. when reached via the map layer selector's "Add map provider" action.
+    sourcesCustomProvidersExpandRequested: false,
   }),
   actions: {
     updateWidth() {
@@ -131,7 +100,6 @@ export const useAppInterfaceStore = defineStore('responsive', {
       if (state.width >= 1600 && state.width < 1920) return 121
       return 130
     },
-    isConfigModalVisible: (state) => state.configModalVisibility,
     isVideoLibraryVisible: (state) => state.videoLibraryVisibility,
     isMissionLibraryVisible: (state) => state.missionLibraryVisibility,
     getUIGlassEffect: (state) => {

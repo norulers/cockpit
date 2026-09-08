@@ -178,12 +178,14 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useMissionPathSignal } from '@/composables/baseStation/useMissionPathSignal'
+import { goToMenuPage } from '@/composables/menuRouting'
 import { openSnackbar } from '@/composables/snackbar'
 import { useMissionEstimates } from '@/composables/useMissionEstimates'
 import { MavType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
 import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
 import { useMissionStore } from '@/stores/mission'
+import { SubMenuComponentName } from '@/types/general'
 
 const { t: $t } = useI18n()
 defineProps<{
@@ -237,9 +239,9 @@ const handleHideMissionEstimates = (): void => {
   emit('update:modelValue', false)
   openSnackbar({
     variant: 'info',
-    message:
-      'You can show the mission estimates again on the Main menu -> Settings -> Mission -> Show mission estimates.',
+    message: 'You can show the mission estimates again in the mission settings.',
     duration: 5000,
+    action: { label: 'Mission settings', handler: () => goToMenuPage(SubMenuComponentName.SettingsMission) },
   })
 }
 </script>

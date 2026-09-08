@@ -1,112 +1,93 @@
 <template>
   <div>
     <Dropdown
-      :model-value="currentModeTranslated"
-      name-key="translatedName"
-      :options="modesWithTranslation"
+      :model-value="currentMode"
+      :options="modeOptions"
+      name-key="name"
+      value-key="value"
       class="min-w-[128px]"
       @update:model-value="onModeSelected"
     />
   </div>
+  <v-dialog v-model="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen" width="700">
+    <v-card class="pa-4 text-white" style="border-radius: 15px" :style="interfaceStore.globalGlassMenuStyles">
+      <v-card-title class="text-center">Mode names</v-card-title>
+      <v-card-text class="max-h-[60vh] overflow-y-auto">
+        <div class="absolute top-2 right-2 z-10">
+          <v-btn
+            icon
+            size="30"
+            variant="text"
+            class="text-white text-[22px]"
+            aria-label="Close"
+            @click="widgetStore.miniWidgetManagerVars(miniWidget.hash).configMenuOpen = false"
+          >
+            <i class="mdi mdi-close"></i>
+          </v-btn>
+        </div>
+        <FlightModeNamesConfig />
+      </v-card-text>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toRefs } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import FlightModeNamesConfig from '@/components/configuration/FlightModeNamesConfig.vue'
 import { datalogger, DatalogVariable } from '@/libs/sensors-logging'
+import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
+import { useWidgetManagerStore } from '@/stores/widgetManager'
+import type { MiniWidget } from '@/types/widgets'
 
 import Dropdown from '../Dropdown.vue'
 
+const props = defineProps<{
+  /**
+   * Configuration of the widget
+   */
+  miniWidget: MiniWidget
+}>()
+const miniWidget = toRefs(props).miniWidget
+
 datalogger.registerUsage(DatalogVariable.mode)
 const vehicleStore = useMainVehicleStore()
+const interfaceStore = useAppInterfaceStore()
+const widgetStore = useWidgetManagerStore()
 const { t } = useI18n()
 const currentMode = ref()
-const currentModeTranslated = ref<{
-  /**
-   *
-   */
-  mode: string
-  /**
-   *
-   */
-  translatedName: string
-}>()
 
 const translateModeName = (modeName: string): string => {
   // Try to find translation key for the mode
   const translationKey = `flightModes.${modeName}`
   const translated = t(translationKey)
   // Return translation if it exists and is different from the key
-  return translated !== translationKey ? translated : modeName
+  return translated !== translationKey ? translated : vehicleStore.flightModeDisplayName(modeName)
 }
 
-const modesWithTranslation = computed(() => {
-  return vehicleStore.modesAvailable().map((mode) => ({
-    mode: mode,
-    translatedName: translateModeName(mode),
+const modeOptions = computed(() =>
+  vehicleStore.modesAvailable().map((mode) => ({
+    value: mode,
+    name: translateModeName(mode),
   }))
-})
+)
 
 // Bound to the dropdown's user-selection event (not a watch on currentMode) so that automated mode changes
 // reflected by the polling below don't get logged or re-issued as if the user changed the mode.
-const onModeSelected = (
-  newVal:
-    | {
-        /**
-cccccccccccccccccccccccccccccccccc *
-cccccccccccccccccccccccccccccccccc
-         */
-        mode: string
-        /**
-mmmmmmmmmmmmmm *
-mmmmmmmmmmmmmm
-         */
-        translatedName: string
-      }
-    | undefined
-): void => {
-  if (!newVal || currentMode.value === undefined) return
-  const newMode = newVal.mode
-  if (newMode === vehicleStore.mode) {
-    console.log('New mode is the same as the current one. No mode-change commands will be issued.')
-    return
-  }
+const onModeSelected = (newMode: unknown): void => {
   currentMode.value = newMode
-  currentModeTranslated.value = newVal
+  if (newMode === undefined || newMode === vehicleStore.mode) return
   logUserAction(`Changed flight mode to '${newMode}'`)
-  vehicleStore.setFlightMode(newMode)
+  vehicleStore.setFlightMode(newMode as string)
 }
-
-watch(
-  () => vehicleStore.mode,
-  (newMode) => {
-    if (newMode && currentMode.value !== newMode) {
-      currentMode.value = newMode
-      const modeObj = modesWithTranslation.value.find((m) => m.mode === newMode)
-      if (modeObj) {
-        currentModeTranslated.value = modeObj
-      }
-    }
-  },
-  { immediate: true }
-)
 
 // eslint-disable-next-line no-undef
 let modeUpdateInterval: NodeJS.Timer | undefined = undefined
 // Poll for mode updates since vehicleStore.mode might not be reactive in all cases
 onMounted(() => {
-  modeUpdateInterval = setInterval(() => {
-    const newMode = vehicleStore.mode
-    if (newMode && currentMode.value !== newMode) {
-      currentMode.value = newMode
-      const modeObj = modesWithTranslation.value.find((m) => m.mode === newMode)
-      if (modeObj) {
-        currentModeTranslated.value = modeObj
-      }
-    }
-  }, 500)
+  modeUpdateInterval = setInterval(() => (currentMode.value = vehicleStore.mode), 500)
 })
 onUnmounted(() => clearInterval(modeUpdateInterval))
 </script>

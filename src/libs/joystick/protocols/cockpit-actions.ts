@@ -167,3 +167,13 @@ export const availableCockpitActions = cockpitActionsManager.availableActions
 export const getAvailableCockpitActions = (): { [key in CockpitActionsFunction]: CockpitAction } => {
   return cockpitActionsManager.availableActions
 }
+
+/**
+ * Get the name to show for an action taken from a joystick mapping, which stores the whole action and thus a name that
+ * was current when the button was mapped
+ * @param {Pick<ProtocolAction, 'id' | 'name'>} action - The action as it is stored in the mapping
+ * @returns {string} The name of the registered action with that id, falling back to the stored one when there is none
+ */
+export const actionDisplayName = (action: Pick<ProtocolAction, 'id' | 'name'>): string => {
+  return availableCockpitActions[action.id as CockpitActionsFunction]?.name ?? action.name
+}

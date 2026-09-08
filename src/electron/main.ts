@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain, powerSaveBlocker, protocol, screen, shell } from 'electron'
 import { join } from 'path'
 
-import { setupAutoUpdater } from './services/auto-update'
 import store from './services/config-store'
 import { setupElectronLogService } from './services/electron-log'
 import { setupGo2RTCService } from './services/go2rtc'
@@ -38,6 +37,27 @@ let mainWindow: BrowserWindow | null
 
 let appSuspensionPowerSaveBlockerId: number | undefined
 let displaySleepPowerSaveBlockerId: number | undefined
+
+/**
+ * Stamps this userData folder with the Chromium and Cockpit versions that opened it.
+ *
+ * Neither Chromium nor Electron leaves a version marker behind, so an older build has no way to tell that the profile
+ * it is about to open was written by a newer one - a downgrade Chromium answers by dropping the affected stores.
+ * config.json is plain JSON at the userData root, so a future build can read it before Chromium touches the profile.
+ *
+ * Runs once the renderer has loaded, so the stamp reflects a profile Chromium really opened rather than a launch that
+ * died on the way there, and so it stays below the module scope where a guard would have to read the previous value.
+ * @returns {void}
+ */
+const recordProfileOpenerVersions = (): void => {
+  try {
+    if (store.get('chromeVersion') !== process.versions.chrome) store.set('chromeVersion', process.versions.chrome)
+    if (store.get('cockpitVersion') !== app.getVersion()) store.set('cockpitVersion', app.getVersion())
+  } catch (error) {
+    // A marker nothing reads yet must never be the reason the app fails to start
+    console.error('Could not record the Chromium and Cockpit versions in the config file.', error)
+  }
+}
 
 /**
  * Create electron window
@@ -103,7 +123,7 @@ function createWindow(): void {
 
   mainWindow.webContents.on('did-finish-load', () => {
     mainWindow?.setTitle(`Cockpit (${app.getVersion()})`)
-    mainWindow?.webContents.send('fullscreen-changed', mainWindow.isFullScreen())
+    recordProfileOpenerVersions()
   })
 
   if (process.env.VITE_DEV_SERVER_URL) {
@@ -117,12 +137,6 @@ app.on('window-all-closed', () => {
   console.log('Closing application.')
   mainWindow = null
   app.quit()
-})
-
-app.on('ready', () => {
-  protocol.registerFileProtocol('file', (i, o) => {
-    o({ path: i.url.substring('file://'.length) })
-  })
 })
 
 protocol.registerSchemesAsPrivileged([

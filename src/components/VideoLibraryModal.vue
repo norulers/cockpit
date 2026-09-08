@@ -412,7 +412,7 @@
                               <p>
                                 {{
                                   $t(
-                                    'These are raw video chunks that need to be processed. The processing can be done exclusively in Cockpit Standalone. Cockpit Lite can only record the video chunks.'
+                                    'These are raw video chunks that need to be processed. The processing can be done exclusively in Cockpit standalone. Cockpit Lite can only record the video chunks.'
                                   )
                                 }}
                               </p>
@@ -427,7 +427,7 @@
                                   </li>
                                   <li class="flex items-start gap-2">
                                     <span class="text-white font-bold">2.</span>
-                                    <span>{{ $t('Open Cockpit Standalone') }}</span>
+                                    <span>{{ $t('Open Cockpit standalone') }}</span>
                                   </li>
                                   <li class="flex items-start gap-2">
                                     <span class="text-white font-bold">3.</span>
@@ -899,7 +899,7 @@ const videoSubTabs = computed(() => [
     label: t('Processed'),
     icon: 'mdi-video',
     disabled: !isElectron(),
-    tooltip: isElectron() ? '' : t('Only available in Cockpit Standalone'),
+    tooltip: isElectron() ? '' : t('Only available in Cockpit standalone'),
   },
   {
     name: 'raw',
@@ -913,7 +913,7 @@ const videoSubTabs = computed(() => [
     label: t('Processing'),
     icon: 'mdi-cog-outline',
     disabled: !isElectron(),
-    tooltip: isElectron() ? t('Process ZIP files with raw video chunks') : t('Only available in Cockpit Standalone'),
+    tooltip: isElectron() ? t('Process ZIP files with raw video chunks') : t('Only available in Cockpit standalone'),
   },
 ])
 
@@ -922,7 +922,7 @@ const openElectronFolder = (opener: () => void): void => {
     opener()
   } else {
     openSnackbar({
-      message: t('This feature is only available in Cockpit Standalone.'),
+      message: t('This feature is only available in Cockpit standalone.'),
       duration: 3000,
       variant: 'error',
       closeButton: true,
@@ -944,7 +944,7 @@ const playVideoInDefaultPlayer = (fileName: string): void => {
   if (isElectron() && window.electronAPI) {
     window.electronAPI?.openVideoFile(fileName)
   } else {
-    openSnackbar({ message: t('This feature is only available in Cockpit Standalone.'), variant: 'error' })
+    openSnackbar({ message: t('This feature is only available in Cockpit standalone.'), variant: 'error' })
   }
 }
 

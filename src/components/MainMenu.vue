@@ -21,7 +21,7 @@
               "
             >
               <GlassButton
-                v-if="route.name === 'widgets-view'"
+                v-if="baseRouteName === 'widgets-view'"
                 :label="simplifiedMainMenu ? '' : $t('Edit Interface')"
                 :selected="widgetStore.editingMode"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
@@ -34,7 +34,7 @@
                 ><img v-if="!simplifiedMainMenu" :src="EditModeIcon" alt="Edit Mode Icon" />
               </GlassButton>
               <GlassButton
-                v-if="route.name !== 'widgets-view'"
+                v-if="baseRouteName !== 'widgets-view'"
                 :label="simplifiedMainMenu ? '' : $t('Flight')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-send' : undefined"
@@ -42,12 +42,11 @@
                 variant="uncontained"
                 :tooltip="simplifiedMainMenu ? $t('Flight') : undefined"
                 :width="buttonSize"
-                :selected="$route.name === 'Flight'"
                 @click="goToFlightView"
                 ><img v-if="!simplifiedMainMenu" :src="FlightIcon" alt="Flight Icon" />
               </GlassButton>
               <GlassButton
-                v-if="route.name !== 'Mission planning'"
+                v-if="baseRouteName !== 'Mission planning'"
                 :label="simplifiedMainMenu ? '' : $t('Mission Planning')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-map-marker-radius-outline' : undefined"
@@ -55,7 +54,6 @@
                 variant="uncontained"
                 :tooltip="simplifiedMainMenu ? $t('Mission Planning') : undefined"
                 :width="buttonSize"
-                :selected="$route.name === 'Mission planning'"
                 @click="goToMissionPlanning"
                 ><img v-if="!simplifiedMainMenu" :src="MissionPlanningIcon" alt="MissionPlanning Icon" />
               </GlassButton>
@@ -139,7 +137,7 @@
               :tooltip="simplifiedMainMenu ? menuitem.title : undefined"
               :button-class="interfaceStore.isOnSmallScreen ? '-ml-[2px]' : ''"
               :icon="menuitem.icon"
-              :selected="interfaceStore.currentSubMenuComponentName === menuitem.componentName"
+              :selected="activeMenuPage === menuitem.componentName"
               variant="uncontained"
               :height="buttonSize * 0.45"
               :icon-size="buttonSize * 0.5"
@@ -149,9 +147,9 @@
                   borderRadius: '4px',
                 }
               "
-              @click="toggleSubMenuComponent(menuitem.component)"
+              @click="toggleMenuPage(menuitem.componentName)"
               ><template #content>
-                <div v-if="currentSubMenuComponent === menuitem.component" class="arrow-left"></div>
+                <div v-if="activeMenuPage === menuitem.componentName" class="arrow-left"></div>
               </template>
             </GlassButton>
             <div class="flex flex-col justify-center align-center pb-1">
@@ -184,8 +182,8 @@
 </template>
 <script setup lang="ts">
 import { onClickOutside, useDebounceFn, useFullscreen, useResizeObserver, useWindowSize } from '@vueuse/core'
-import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
+import { useRouter } from 'vue-router'
 
 import EditModeIcon from '@/assets/icons/edit-mode.svg'
 import ExitFullScreenIcon from '@/assets/icons/exit-full-screen.svg'
@@ -197,31 +195,24 @@ import SettingsIcon from '@/assets/icons/settings.svg'
 import ToolsIcon from '@/assets/icons/tools.svg'
 import GlassButton from '@/components/GlassButton.vue'
 import {
+  goToAbout,
+  goToBaseView,
+  goToEditMode,
+  goToSubMenu,
+  toggleMenuPage,
+  useActiveMenuRoute,
+} from '@/composables/menuRouting'
+import {
   availableCockpitActions,
   registerActionCallback,
   unregisterActionCallback,
 } from '@/libs/joystick/protocols/cockpit-actions'
-import { SubMenuComponentName, SubMenuName, useAppInterfaceStore } from '@/stores/appInterface'
+import { menuPagesOfSubMenu } from '@/libs/menu-pages'
+import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useWidgetManagerStore } from '@/stores/widgetManager'
-import { SubMenuComponent } from '@/types/general'
-import ConfigurationActionsView from '@/views/ConfigurationActionsView.vue'
-import ConfigurationAlertsView from '@/views/ConfigurationAlertsView.vue'
-import ConfigurationCloudView from '@/views/ConfigurationCloudView.vue'
-import ConfigurationDevelopmentView from '@/views/ConfigurationDevelopmentView.vue'
-import ConfigurationGeneralView from '@/views/ConfigurationGeneralView.vue'
-import ConfigurationJoystickView from '@/views/ConfigurationJoystickView.vue'
-import ConfigurationTelemetryView from '@/views/ConfigurationLogsView.vue'
-import ConfigurationMAVLinkView from '@/views/ConfigurationMAVLinkView.vue'
-import ConfigurationMissionView from '@/views/ConfigurationMissionView.vue'
-import ConfigurationSourcesView from '@/views/ConfigurationSourcesView.vue'
-import ConfigurationUIView from '@/views/ConfigurationUIView.vue'
-import ConfigurationVideoView from '@/views/ConfigurationVideoView.vue'
-import ToolsDataLakeView from '@/views/ToolsDataLakeView.vue'
-import ToolsLogsView from '@/views/ToolsLogsView.vue'
-import ToolsMapView from '@/views/ToolsMapView.vue'
-import ToolsMAVLinkView from '@/views/ToolsMAVLinkView.vue'
+import { SubMenuName } from '@/types/general'
 
-const route = useRoute()
+const { baseRouteName, activeSubMenu, activeMenuPage } = useActiveMenuRoute()
 const router = useRouter()
 const interfaceStore = useAppInterfaceStore()
 const widgetStore = useWidgetManagerStore()
@@ -239,27 +230,9 @@ const toggleFullscreen = (): void => {
   }
 }
 
-/**
- * Main menu component
- */
-interface Props {
-  /**
-   * The current sub-menu component to be displayed.
-   */
-  currentSubMenuComponent: SubMenuComponent | null
-}
-
-const props = defineProps<Props>()
 const emit = defineEmits<{
-  (event: 'update:currentSubMenuComponent', value: SubMenuComponent | null): void
   (event: 'closeMainMenu'): void
-  (event: 'openAboutDialog'): void
 }>()
-
-const currentSubMenuComponentRef = computed({
-  get: () => props.currentSubMenuComponent,
-  set: (val: SubMenuComponent | null) => emit('update:currentSubMenuComponent', val),
-})
 
 const showSubMenu = ref(false)
 const mainMenu = ref<HTMLElement | null>(null)
@@ -347,163 +320,14 @@ watchEffect(() => {
   }
 })
 
-const configMenu = computed(() => {
-  const menusToShow = [
-    {
-      icon: 'mdi-view-dashboard-variant',
-      title: 'General',
-      titleKey: 'general',
-      componentName: SubMenuComponentName.SettingsGeneral,
-      component: markRaw(ConfigurationGeneralView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-monitor-cellphone',
-      title: 'Interface',
-      titleKey: 'interface',
-      componentName: SubMenuComponentName.SettingsInterface,
-      component: markRaw(ConfigurationUIView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-controller',
-      title: 'Joystick',
-      titleKey: 'joystick',
-      componentName: SubMenuComponentName.SettingsJoystick,
-      component: markRaw(ConfigurationJoystickView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-video',
-      title: 'Video',
-      titleKey: 'video',
-      componentName: SubMenuComponentName.SettingsVideo,
-      component: markRaw(ConfigurationVideoView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-subtitles-outline',
-      title: 'Telemetry',
-      titleKey: 'logs',
-      componentName: SubMenuComponentName.SettingsTelemetry,
-      component: markRaw(ConfigurationTelemetryView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-alert-rhombus-outline',
-      title: 'Alerts',
-      titleKey: 'alerts',
-      componentName: SubMenuComponentName.SettingsAlerts,
-      component: markRaw(ConfigurationAlertsView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-dev-to',
-      title: 'Dev',
-      titleKey: 'development',
-      componentName: SubMenuComponentName.SettingsDev,
-      component: markRaw(ConfigurationDevelopmentView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-map-marker-path',
-      title: 'Mission',
-      titleKey: 'mission',
-      componentName: SubMenuComponentName.SettingsMission,
-      component: markRaw(ConfigurationMissionView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-run-fast',
-      title: 'Actions',
-      titleKey: 'actions',
-      componentName: SubMenuComponentName.SettingsActions,
-      component: markRaw(ConfigurationActionsView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-import',
-      title: 'Sources',
-      componentName: SubMenuComponentName.SettingsSources,
-      component: markRaw(ConfigurationSourcesView) as SubMenuComponent,
-    },
-  ]
-
-  if (interfaceStore.pirateMode) {
-    menusToShow.push({
-      icon: 'mdi-protocol',
-      title: 'MAVLink',
-      titleKey: 'mavlink',
-      componentName: SubMenuComponentName.SettingsMAVLink,
-      component: markRaw(ConfigurationMAVLinkView) as SubMenuComponent,
-    })
-    menusToShow.push({
-      icon: 'mdi-cloud-outline',
-      title: 'Cloud',
-      componentName: SubMenuComponentName.SettingsCloud,
-      component: markRaw(ConfigurationCloudView) as SubMenuComponent,
-    })
-  }
-  return menusToShow
-})
-
-const toolsMenu = computed(() => {
-  const menusToShow = [
-    {
-      icon: 'mdi-protocol',
-      title: 'MAVLink',
-      titleKey: 'mavlink',
-      componentName: SubMenuComponentName.ToolsMAVLink,
-      component: markRaw(ToolsMAVLinkView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-database-outline',
-      title: 'Data-lake',
-      titleKey: 'dataLake',
-      componentName: SubMenuComponentName.ToolsDataLake,
-      component: markRaw(ToolsDataLakeView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-file-chart-outline',
-      title: 'Data Logs',
-      componentName: SubMenuComponentName.ToolsLogs,
-      component: markRaw(ToolsLogsView) as SubMenuComponent,
-    },
-    {
-      icon: 'mdi-map-marker-radius',
-      title: 'Map',
-      componentName: SubMenuComponentName.ToolsMap,
-      component: markRaw(ToolsMapView) as SubMenuComponent,
-    },
-  ]
-
-  if (interfaceStore.pirateMode) {
-    // Add pirate-mode specific tools here
-  }
-
-  return menusToShow
-})
-
 const selectSubMenu = (subMenuName: SubMenuName): void => {
   logUserAction(`Opened '${subMenuName}' submenu`)
-  interfaceStore.currentSubMenuName = subMenuName
-  interfaceStore.mainMenuCurrentStep = 2
+  goToSubMenu(subMenuName)
 }
 
 const closeSubMenu = (): void => {
-  logUserAction(`Closed '${interfaceStore.currentSubMenuName ?? ''}' submenu`)
-  interfaceStore.mainMenuCurrentStep = 1
-  currentSubMenuComponentRef.value = null
-}
-
-const toggleSubMenuComponent = (component: SubMenuComponent): void => {
-  const componentTitle = currentSubMenu.value.find((menuitem) => menuitem.component === component)?.title ?? 'unknown'
-  if (currentSubMenuComponentRef.value === null) {
-    logUserAction(`Opened '${componentTitle}' panel`)
-    currentSubMenuComponentRef.value = component
-    interfaceStore.configModalVisibility = true
-    return
-  }
-  if (currentSubMenuComponentRef.value === component) {
-    logUserAction(`Closed '${componentTitle}' panel`)
-    currentSubMenuComponentRef.value = null
-    interfaceStore.configModalVisibility = false
-    return
-  }
-  logUserAction(`Opened '${componentTitle}' panel`)
-  currentSubMenuComponentRef.value = component
-  interfaceStore.configModalVisibility = true
+  logUserAction(`Closed '${activeSubMenu.value ?? ''}' submenu`)
+  goToBaseView()
 }
 
 const mainMenuWidth = computed(() => {
@@ -591,13 +415,17 @@ const handleCloseMainMenu = (): void => {
 
 const openAboutDialog = (): void => {
   logUserAction('Opened About dialog')
+  goToAbout()
   emit('closeMainMenu')
-  emit('openAboutDialog')
 }
 
 const toggleEditMode = (): void => {
   logUserAction(`${!widgetStore.editingMode ? 'Entered' : 'Exited'} interface edit mode`)
-  widgetStore.editingMode = !widgetStore.editingMode
+  if (widgetStore.editingMode) {
+    goToBaseView()
+  } else {
+    goToEditMode()
+  }
   handleCloseMainMenu()
 }
 
@@ -626,16 +454,9 @@ const fullScreenCallbackId = registerActionCallback(
   debouncedToggleFullScreen
 )
 
-const availableSubMenus = computed(() => {
-  return {
-    settings: configMenu.value,
-    tools: toolsMenu.value,
-  }
-})
-
 const currentSubMenu = computed(() => {
-  if (interfaceStore.currentSubMenuName === null) return []
-  return availableSubMenus.value[interfaceStore.currentSubMenuName]
+  if (activeSubMenu.value === undefined) return []
+  return menuPagesOfSubMenu(activeSubMenu.value, interfaceStore.pirateMode)
 })
 
 onClickOutside(mainMenu, () => {
@@ -644,20 +465,12 @@ onClickOutside(mainMenu, () => {
   }
   if (
     interfaceStore.mainMenuCurrentStep === 2 &&
-    currentSubMenuComponentRef.value === null &&
+    activeMenuPage.value === undefined &&
     !interfaceStore.isTutorialVisible
   ) {
     emit('closeMainMenu')
   }
 })
-
-watch(
-  () => interfaceStore.currentSubMenuComponentName,
-  (subMenuComponentName) => {
-    currentSubMenuComponentRef.value =
-      currentSubMenu.value.find((item) => item.componentName === subMenuComponentName)?.component || null
-  }
-)
 
 onBeforeUnmount(() => {
   unregisterActionCallback(fullScreenCallbackId)

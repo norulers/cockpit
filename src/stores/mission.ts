@@ -24,6 +24,7 @@ import {
   AltitudeReferenceType,
   CockpitMission,
   countNavWaypointCommands,
+  CustomTileProviderMeta,
   isNavWaypointCommand,
   MapOverlayMeta,
   MapTileProvider,
@@ -66,6 +67,12 @@ export const useMissionStore = defineStore('mission', () => {
   const userLastMapZoom = useBlueOsStorage<number>('cockpit-user-last-map-zoom', DEFAULT_MAP_ZOOM)
   const followVehicleOnMap = useBlueOsStorage<boolean>('cockpit-map-follow-vehicle', false)
   const draftMission = useBlueOsStorage('cockpit-draft-mission', {})
+  // Snapshot of the last mission uploaded to the vehicle, kept so users can restore it for quick edits
+  // even across sessions, without re-downloading it from the (possibly deployed) vehicle.
+  const lastUploadedMission = useBlueOsStorage<CockpitMission | Record<string, never>>(
+    'cockpit-last-uploaded-mission',
+    {}
+  )
   const vehicleMission = useBlueOsStorage<Waypoint[]>('cockpit-vehicle-mission', [])
   const vehicleMissionRevision = useBlueOsStorage<number>('cockpit-vehicle-mission-rev', 0)
   const alwaysSwitchToFlightMode = useBlueOsStorage('cockpit-mission-always-switch-to-flight-mode', false)
@@ -120,8 +127,7 @@ export const useMissionStore = defineStore('mission', () => {
   } | null>(null)
 
   // Fallback vehicle type used by vehicle-specific planning features when no vehicle is connected.
-  const plannedVehicleType = useBlueOsStorage<MavType | undefined>('cockpit-planned-vehicle-type', undefined)
-  const customVehicleIcon = useBlueOsStorage<string | undefined>('cockpit-custom-vehicle-icon', undefined)
+  const plannedVehicleType = useBlueOsStorage<MavType | null>('cockpit-planned-vehicle-type', null)
   const savedMissions = useBlueOsStorage<SavedMission[]>('cockpit-mission-library', [])
   // Thumbnail bytes live local-first in IndexedDB and sync to the vehicle as real files, so adding many
   // entries never bloats the settings payload the way inlined base64 SVGs would.
@@ -163,6 +169,30 @@ export const useMissionStore = defineStore('mission', () => {
   const requestMapOverlayFocus = (id: string): void => {
     mapOverlayFocusRequest.value = { id, revision: mapOverlayFocusRequest.value.revision + 1 }
   }
+
+  // Metadata for user-defined custom map tile providers. For `file` providers the tile archive lives on the
+  // vehicle (File Browser) and is cached locally in IndexedDB, both keyed by each entry's `id`.
+  const customTileProviders = useBlueOsStorage<CustomTileProviderMeta[]>('cockpit-custom-tile-providers-v1', [])
+
+  const addCustomTileProvider = (provider: CustomTileProviderMeta): void => {
+    customTileProviders.value.push(provider)
+  }
+
+  const removeCustomTileProvider = (id: string): void => {
+    const index = customTileProviders.value.findIndex((provider) => provider.id === id)
+    if (index !== -1) {
+      customTileProviders.value.splice(index, 1)
+    }
+  }
+
+  const updateCustomTileProvider = (id: string, changes: Partial<CustomTileProviderMeta>): void => {
+    const provider = customTileProviders.value.find((entry) => entry.id === id)
+    if (provider) Object.assign(provider, changes)
+  }
+
+  // Id of the custom provider the user last selected as the map's base layer, so the choice is restored on reload
+  // (built-in base maps are tracked separately by `userLastMapTileProvider`). Null when a built-in map is active.
+  const userLastCustomMapProviderId = useBlueOsStorage<string | null>('cockpit-user-last-custom-map-provider-id', null)
 
   // Only remember user-typed names so the mission-name restore button never brings back an automatic name.
   watch(missionName, () => {
@@ -437,6 +467,10 @@ export const useMissionStore = defineStore('mission', () => {
 
   const clearDraft = (): void => {
     draftMission.value = {}
+  }
+
+  const setLastUploadedMission = (mission: CockpitMission): void => {
+    lastUploadedMission.value = mission
   }
 
   const bumpVehicleMissionRevision = (wps: Waypoint[]): void => {
@@ -758,7 +792,7 @@ export const useMissionStore = defineStore('mission', () => {
   const effectiveVehicleType = computed<MavType | undefined>(() => {
     return mainVehicleStore.isVehicleOnline
       ? (mainVehicleStore.vehicleType as MavType | undefined)
-      : plannedVehicleType.value
+      : plannedVehicleType.value ?? undefined
   })
 
   // When `payload.id` matches an existing entry that entry is updated in-place; otherwise a new
@@ -869,10 +903,17 @@ export const useMissionStore = defineStore('mission', () => {
     removeMapOverlay,
     mapOverlayFocusRequest,
     requestMapOverlayFocus,
+    customTileProviders,
+    addCustomTileProvider,
+    removeCustomTileProvider,
+    updateCustomTileProvider,
+    userLastCustomMapProviderId,
     persistDraft,
     clearDraft,
+    setLastUploadedMission,
     bumpVehicleMissionRevision,
     draftMission,
+    lastUploadedMission,
     vehicleMission,
     vehicleMissionRevision,
     alwaysSwitchToFlightMode,
@@ -928,7 +969,6 @@ export const useMissionStore = defineStore('mission', () => {
     homeMarkerPosition,
     userCommandedHomePosition,
     plannedVehicleType,
-    customVehicleIcon,
     effectiveVehicleType,
     savedMissions,
     thumbnailUrlFor,

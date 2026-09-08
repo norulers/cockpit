@@ -12,8 +12,10 @@ import { getAllDataLakeVariablesInfo, getDataLakeVariableInfo, setDataLakeVariab
 import { createDataLakeVariable } from '@/libs/actions/data-lake'
 import { altitude_setpoint } from '@/libs/altitude-slider'
 import {
+  counterDeltaToMbps,
   getCpusInfo,
   getCpuTempCelsius,
+  getIpsInformationFromVehicle,
   getKeyDataFromCockpitVehicleStorage,
   getNetworkInfo,
   getStatus,
@@ -31,6 +33,8 @@ import { MavlinkManualControlManager } from '@/libs/joystick/protocols/mavlink-m
 import { canByPassCategory, EventCategory, slideToConfirm } from '@/libs/slide-to-confirm'
 import type { ArduPilot } from '@/libs/vehicle/ardupilot/ardupilot'
 import { CustomMode } from '@/libs/vehicle/ardupilot/ardurover'
+import { getVehicleTypeFromMavType, renameModeActions } from '@/libs/vehicle/ardupilot/common'
+import { type FlightModeNames, flightModeName } from '@/libs/vehicle/ardupilot/mode-names'
 import { defaultMessageIntervalsOptions } from '@/libs/vehicle/mavlink/defaults'
 import type { MAVLinkParameterSetData, MessageIntervalOptions } from '@/libs/vehicle/mavlink/types'
 import { MAVLINK_MESSAGE_INTERVALS_STORAGE_KEY } from '@/libs/vehicle/mavlink/vehicle'
@@ -50,6 +54,7 @@ import type {
 import { Coordinates } from '@/libs/vehicle/types'
 import * as Vehicle from '@/libs/vehicle/vehicle'
 import { VehicleFactory } from '@/libs/vehicle/vehicle-factory'
+import { canSuggestCabledLink, createWirelessTrafficWatcher } from '@/libs/wireless-traffic-warning'
 import type { MissionLoadingCallback, Waypoint } from '@/types/mission'
 
 import { useControllerStore } from './controller'
@@ -170,6 +175,24 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
   const mode = ref<string | undefined>(undefined)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const modes = ref<Map<string, any>>()
+
+  const customFlightModeNames = useBlueOsStorage<FlightModeNames>('cockpit-custom-flight-mode-names', {})
+
+  // The joystick mode actions are registered once at startup, so they have to be renamed when the names change
+  watch(customFlightModeNames, (names) => renameModeActions(names), { deep: true, immediate: true })
+
+  const ardupilotVehicleType = computed(() =>
+    vehicleType.value === undefined ? undefined : getVehicleTypeFromMavType(vehicleType.value)
+  )
+
+  /**
+   * Name to show the user for one of the modes of the connected vehicle
+   * @param {string} modeName - Mode name as reported by the vehicle, e.g. 'ALT_HOLD'
+   * @returns {string} The name chosen by the user, the ArduPilot one, or the mode name itself
+   */
+  function flightModeDisplayName(modeName: string): string {
+    return flightModeName(modeName, ardupilotVehicleType.value, customFlightModeNames.value)
+  }
 
   // Store custom message intervals in BlueOS storage
   const mavlinkMessageIntervalOptions = useBlueOsStorage(
@@ -782,10 +805,47 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
     const networkDownloadSpeedMbpsVariableId = (interfaceName: string): string =>
       `blueos/network/${interfaceName}/downloadSpeedMbps`
 
-    // Store previous network readings for speed calculation
+    // Store the recent network readings of each interface, which the published speeds are measured across
 
     // eslint-disable-next-line jsdoc/require-jsdoc, prettier/prettier
-    const previousNetworkReadings: Map<string, { bytesReceived: number; bytesTransmitted: number; timestamp: number }> = new Map()
+    const networkReadingsHistory: Map<string, { bytesReceived: number; bytesTransmitted: number; timestamp: number }[]> = new Map()
+
+    // Long enough to span several counter refreshes, which is what makes the published speed the real rate.
+    const speedAveragingWindowMs = 10000
+
+    const wirelessTrafficWatcher = createWirelessTrafficWatcher()
+    const cabledLinkCheckIntervalMs = 30000
+    let checkingCabledLinkSuggestion = false
+    let lastCabledLinkCheckTimestamp = 0
+
+    // Asking the vehicle which links it can be reached on is a request of its own, so it is only made once the
+    // traffic condition holds, and throttled from there. The answer cannot be kept for the session, as a cable
+    // plugged in or pulled changes it. A failure just waits for the next check, since a saturated wireless link
+    // is exactly what makes this request fail, and that is when the warning is most needed.
+    const suggestCabledLinkIfItMakesSense = async (timestamp: number): Promise<void> => {
+      if (checkingCabledLinkSuggestion) return
+      if (timestamp - lastCabledLinkCheckTimestamp < cabledLinkCheckIntervalMs) return
+      checkingCabledLinkSuggestion = true
+      lastCabledLinkCheckTimestamp = timestamp
+
+      try {
+        const ipsInfo = await getIpsInformationFromVehicle(globalAddress.value)
+        if (!canSuggestCabledLink(ipsInfo, globalAddress.value)) return
+      } catch (error) {
+        console.error(`Failed to get the links the vehicle can be reached on: ${error}`)
+        return
+      } finally {
+        checkingCabledLinkSuggestion = false
+      }
+
+      wirelessTrafficWatcher.registerWarningShown()
+      openSnackbar({
+        message:
+          "A lot of data is going through the vehicle's WiFi connection. Connecting through the cabled network should give you better video quality and less delay.",
+        variant: 'warning',
+        persistent: true,
+      })
+    }
 
     const cpusInfos = await getCpusInfo(globalAddress.value)
     cpusInfos.forEach((cpu) => {
@@ -877,8 +937,11 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
       try {
         const updatedNetworkInfos = await getNetworkInfo(globalAddress.value)
         const currentTimestamp = Date.now()
+        const totalUploadedBytesPerInterface: Record<string, number> = {}
 
         updatedNetworkInfos.forEach((networkInterface) => {
+          totalUploadedBytesPerInterface[networkInterface.name] = networkInterface.total_transmitted_B
+
           // Convert total bytes to megabytes (MB)
           const totalReceivedMB = networkInterface.total_received_B / (1024 * 1024)
           const totalTransmittedMB = networkInterface.total_transmitted_B / (1024 * 1024)
@@ -888,39 +951,37 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
           setDataLakeVariableData(networkTotalTransmittedMBVariableId(networkInterface.name), totalTransmittedMB)
 
           // Calculate and update speeds
-          const previousReading = previousNetworkReadings.get(networkInterface.name)
-          if (previousReading) {
-            const timeDeltaSeconds = (currentTimestamp - previousReading.timestamp) / 1000
-            if (timeDeltaSeconds > 0) {
-              // Calculate speed in bytes per second
-              const downloadSpeedBytesPerSec =
-                (networkInterface.total_received_B - previousReading.bytesReceived) / timeDeltaSeconds
-              const uploadSpeedBytesPerSec =
-                (networkInterface.total_transmitted_B - previousReading.bytesTransmitted) / timeDeltaSeconds
-
-              // Convert to megabits per second (Mbps): bytes/s * 8 bits/byte / (1024 * 1024) = Mbps
-              const downloadSpeedMbps = (downloadSpeedBytesPerSec * 8) / (1024 * 1024)
-              const uploadSpeedMbps = (uploadSpeedBytesPerSec * 8) / (1024 * 1024)
-
-              // Set speeds (ensure they're not negative due to counter resets)
-              setDataLakeVariableData(
-                networkDownloadSpeedMbpsVariableId(networkInterface.name),
-                Math.max(0, downloadSpeedMbps)
-              )
-              setDataLakeVariableData(
-                networkUploadSpeedMbpsVariableId(networkInterface.name),
-                Math.max(0, uploadSpeedMbps)
-              )
-            }
+          const windowStart = currentTimestamp - speedAveragingWindowMs
+          const storedReadings = networkReadingsHistory.get(networkInterface.name) ?? []
+          const readings = storedReadings.filter((reading) => reading.timestamp > windowStart)
+          // A gap longer than the window leaves nothing inside it, and publishing nothing would leave the
+          // previous rate standing as if it were current, so the newest reading is measured against instead.
+          const oldestReading = readings[0] ?? storedReadings[storedReadings.length - 1]
+          if (oldestReading) {
+            const spanMs = currentTimestamp - oldestReading.timestamp
+            setDataLakeVariableData(
+              networkDownloadSpeedMbpsVariableId(networkInterface.name),
+              counterDeltaToMbps(networkInterface.total_received_B - oldestReading.bytesReceived, spanMs)
+            )
+            setDataLakeVariableData(
+              networkUploadSpeedMbpsVariableId(networkInterface.name),
+              counterDeltaToMbps(networkInterface.total_transmitted_B - oldestReading.bytesTransmitted, spanMs)
+            )
           }
 
           // Store current reading for next calculation
-          previousNetworkReadings.set(networkInterface.name, {
+          readings.push({
             bytesReceived: networkInterface.total_received_B,
             bytesTransmitted: networkInterface.total_transmitted_B,
             timestamp: currentTimestamp,
           })
+          networkReadingsHistory.set(networkInterface.name, readings)
         })
+
+        // Not awaited, so a slow beacon does not hold this round nor report its failure as a data lake one.
+        if (wirelessTrafficWatcher.shouldWarn(totalUploadedBytesPerInterface, currentTimestamp)) {
+          suggestCabledLinkIfItMakesSense(currentTimestamp)
+        }
       } catch (error) {
         console.error(`Failed to update network information in data lake: ${error}`)
       }
@@ -1058,6 +1119,30 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
     await mainVehicle.value.setCruiseSpeed(speedMps)
   }
 
+  /**
+   * Broadcast a video-capture (recording) start to all cameras over MAVLink
+   * @returns {void}
+   */
+  function sendStartVideoCaptureCommand(): void {
+    mainVehicle.value?.sendStartVideoCaptureCommand()
+  }
+
+  /**
+   * Broadcast a video-capture (recording) stop to all cameras over MAVLink
+   * @returns {void}
+   */
+  function sendStopVideoCaptureCommand(): void {
+    mainVehicle.value?.sendStopVideoCaptureCommand()
+  }
+
+  /**
+   * Broadcast a single image capture to all cameras over MAVLink
+   * @returns {void}
+   */
+  function sendStartImageCaptureCommand(): void {
+    mainVehicle.value?.sendStartImageCaptureCommand()
+  }
+
   return {
     arm,
     takeoff,
@@ -1077,6 +1162,9 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
     returnHome,
     setMissionCurrent,
     setCruiseSpeed,
+    sendStartVideoCaptureCommand,
+    sendStopVideoCaptureCommand,
+    sendStartImageCaptureCommand,
     getCurrentVehicleName,
     mainVehicle,
     globalAddress,
@@ -1101,6 +1189,9 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
     statusGPS,
     mode,
     modes,
+    ardupilotVehicleType,
+    customFlightModeNames,
+    flightModeDisplayName,
     isArmed,
     flying,
     isVehicleOnline,

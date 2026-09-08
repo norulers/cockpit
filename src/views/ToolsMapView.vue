@@ -123,6 +123,7 @@ import { useI18n } from 'vue-i18n'
 import ExpansiblePanel from '@/components/ExpansiblePanel.vue'
 import PoiManager from '@/components/poi/PoiManager.vue'
 import { useInteractionDialog } from '@/composables/interactionDialog'
+import { closeMenuPage } from '@/composables/menuRouting'
 import { usePointsOfInterest } from '@/composables/usePointsOfInterest'
 import { getPoiMarkerColor, getPoiMarkerOpacity } from '@/libs/utils-poi'
 import { useAppInterfaceStore } from '@/stores/appInterface'
@@ -165,8 +166,7 @@ const centerOnPoi = (poi: ResolvedPointOfInterest): void => {
   logUserAction(`Centered the map on the "${poi.name}" point of interest`)
   missionStore.requestMapCenterOn(poi.coordinates)
   // Close the submenu panel so the centered map is visible, but keep the main menu drawer open.
-  interfaceStore.configModalVisibility = false
-  interfaceStore.currentSubMenuComponentName = null
+  closeMenuPage()
 }
 
 const editPoi = (poi: ResolvedPointOfInterest): void => {

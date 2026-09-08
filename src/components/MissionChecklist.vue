@@ -121,10 +121,12 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { goToMenuPage } from '@/composables/menuRouting'
 import { useBlueOsStorage } from '@/composables/settingsSyncer'
 import { openSnackbar } from '@/composables/snackbar'
 import { useAppInterfaceStore } from '@/stores/appInterface'
 import { useMissionStore } from '@/stores/mission'
+import { SubMenuComponentName } from '@/types/general'
 
 const { t: $t } = useI18n()
 type ChecklistItem = {
@@ -253,9 +255,10 @@ watch(
   (value) => {
     if (!value) {
       openSnackbar({
-        message: `Pre-arm checklist disabled. You can re-enable it in Settings → Mission → Enable pre-arm checklist.`,
+        message: 'Pre-arm checklist disabled. You can re-enable it in the mission settings.',
         variant: 'info',
         duration: 5000,
+        action: { label: 'Mission settings', handler: () => goToMenuPage(SubMenuComponentName.SettingsMission) },
       })
     }
   },

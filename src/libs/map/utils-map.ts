@@ -36,6 +36,34 @@ export const distanceInMeters = (from: WaypointCoordinates, to: WaypointCoordina
   L.latLng(from[0], from[1]).distanceTo(L.latLng(to[0], to[1]))
 
 /**
+ * A pointer position expressed both in a map container's pixel space and as a geographic coordinate.
+ */
+export type MapPointerPosition = {
+  /**
+   * Position relative to the map container's top-left corner, in pixels.
+   */
+  containerPoint: L.Point
+  /**
+   * Geographic coordinate under that position.
+   */
+  latlng: L.LatLng
+}
+
+/**
+ * Resolves a viewport-space (client) pixel position against a map, which is what a pointer position
+ * cached outside a leaflet mouse handler needs before it can be treated as a coordinate.
+ * @param {L.Map} map - Map whose container the client position is measured against.
+ * @param {number} clientX - Viewport-space horizontal position, in pixels.
+ * @param {number} clientY - Viewport-space vertical position, in pixels.
+ * @returns {MapPointerPosition} The position in container space and the coordinate under it.
+ */
+export const mapPointerPositionFromClient = (map: L.Map, clientX: number, clientY: number): MapPointerPosition => {
+  const rect = map.getContainer().getBoundingClientRect()
+  const containerPoint = L.point(clientX - rect.left, clientY - rect.top)
+  return { containerPoint, latlng: map.containerPointToLatLng(containerPoint) }
+}
+
+/**
  * Enum for the different types of targets that can be followed.
  * @enum {string}
  */
@@ -863,4 +891,77 @@ export const affectedAngleTriples = (
     }
   }
   return triples
+}
+
+const layersControlActionClass = 'cockpit-leaflet-layers-action-btn'
+
+// Marks the control as carrying an action row, so the single padding rule in `global.css` can even out Leaflet's
+// asymmetric expanded padding for it without each map view repeating the same override.
+const layersControlWithActionClass = 'cockpit-leaflet-layers-with-action'
+
+/**
+ * A clickable action appended to the bottom of a Leaflet layers control's list.
+ */
+export interface LayersControlAction {
+  /**
+   * Button label.
+   */
+  label: string
+  /**
+   * Invoked when the action button is clicked.
+   */
+  onClick: () => void
+}
+
+/**
+ * Creates a Leaflet layers control that renders a clickable action row (e.g. "Add map provider") at the bottom
+ * of its list. The row is re-injected every time the control is added to a map, so it survives the hover-driven
+ * add/remove cycles the map widget performs on its controls.
+ * @param {Record<string, L.Layer>} baseMaps - Base layers to expose (radio section).
+ * @param {Record<string, L.Layer> | undefined} overlays - Optional overlays (checkbox section).
+ * @param {LayersControlAction} action - The action row to render below the layer list.
+ * @returns {L.Control.Layers} The configured layers control instance.
+ */
+export const createLayersControlWithAction = (
+  baseMaps: Record<string, L.Layer>,
+  overlays: Record<string, L.Layer> | undefined,
+  action: LayersControlAction
+): L.Control.Layers => {
+  const ExtendedLayersControl = L.Control.Layers.extend({
+    onAdd(this: L.Control.Layers, map: L.Map): HTMLElement {
+      const baseOnAdd = L.Control.Layers.prototype.onAdd as (m: L.Map) => HTMLElement
+      const container = baseOnAdd.call(this, map)
+      container.classList.add(layersControlWithActionClass)
+      const list = container.querySelector('.leaflet-control-layers-list') as HTMLElement | null
+      if (!list) return container
+      list.querySelectorAll('.' + layersControlActionClass).forEach((el) => el.remove())
+
+      const separator = document.createElement('div')
+      separator.className = 'leaflet-control-layers-separator'
+
+      const button = document.createElement('button')
+      button.className = layersControlActionClass
+      button.type = 'button'
+      button.textContent = action.label
+      Object.assign(button.style, {
+        display: 'block',
+        width: '100%',
+        boxSizing: 'border-box',
+        padding: '6px 8px',
+        marginTop: '6px',
+        borderRadius: '4px',
+        background: '#FFFFFF22',
+        cursor: 'pointer',
+        color: '#fff',
+        boxShadow: '1px 1px 2px 0 rgba(0, 0, 0, 0.2)',
+      } satisfies Partial<CSSStyleDeclaration>)
+      L.DomEvent.disableClickPropagation(button)
+      L.DomEvent.on(button, 'click', action.onClick)
+
+      list.appendChild(separator)
+      list.appendChild(button)
+      return container
+    },
+  })
+  return new (ExtendedLayersControl as unknown as typeof L.Control.Layers)(baseMaps, overlays)
 }

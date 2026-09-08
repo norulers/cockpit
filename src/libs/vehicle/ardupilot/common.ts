@@ -7,6 +7,7 @@ import {
 } from '@/libs/joystick/protocols/cockpit-actions'
 
 import { Type as VehicleType } from '../vehicle'
+import { type FlightModeNames, flightModeName } from './mode-names'
 import { CopterMode, PlaneMode, RoverMode, SubMode } from './types/modes'
 
 type ModeEnum = Record<string, string | number>
@@ -104,12 +105,20 @@ export function getVehicleModeActionId(vehicleType: VehicleType, modeName: strin
 export function createVehicleModeAction(vehicleType: VehicleType, modeName: string): CockpitAction {
   const actionId = getVehicleModeActionId(vehicleType, modeName)
   // TODO: Use the new MAVLink Mode microservice: https://mavlink.io/en/services/standard_modes.html#getting-all-available-modes
-  const displayName = modeName
-    .split('_')
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
+  return new CockpitAction(actionId, vehicleModeActionName(vehicleType, modeName))
+}
+
+/**
+ * Build the name of the action that sets a vehicle mode
+ * @param {VehicleType} vehicleType - The vehicle type
+ * @param {string} modeName - The mode name
+ * @param {FlightModeNames} customNames - Names chosen by the user, which win over the ArduPilot ones
+ * @returns {string} The name to show for the action
+ */
+function vehicleModeActionName(vehicleType: VehicleType, modeName: string, customNames?: FlightModeNames): string {
+  const displayName = flightModeName(modeName, vehicleType, customNames)
   const vehicleDisplayName = vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1)
-  return new CockpitAction(actionId, `${displayName} Mode (ArduPilot ${vehicleDisplayName})`)
+  return `${displayName} Mode (ArduPilot ${vehicleDisplayName})`
 }
 
 /**
@@ -123,7 +132,7 @@ function getModeName(vehicleType: VehicleType, modeValue: number): string {
   if (modeEnum?.[modeValue]) {
     return (modeEnum[modeValue] as string).toLowerCase()
   }
-  return 'unknown'
+  return 'Unknown'
 }
 
 /**
@@ -192,6 +201,20 @@ function preRegisterAllModeActions(): void {
 
 // Pre-register all mode actions at module load time
 preRegisterAllModeActions()
+
+/**
+ * Rename the already registered mode actions, so a mode the user renamed is called the same everywhere it is offered
+ * @param {FlightModeNames} customNames - Names chosen by the user, which win over the ArduPilot ones
+ */
+export function renameModeActions(customNames: FlightModeNames): void {
+  for (const [vehicleType, modeEnum] of Object.entries(vehicleModeEnums)) {
+    for (const [modeName, modeValue] of getModeEntries(modeEnum)) {
+      const action = modeActionRegistry.get(getModeRegistryKey(vehicleType as VehicleType, modeValue))
+      if (action === undefined) continue
+      action.name = vehicleModeActionName(vehicleType as VehicleType, modeName, customNames)
+    }
+  }
+}
 
 /**
  * Register mode change callbacks for a connected vehicle

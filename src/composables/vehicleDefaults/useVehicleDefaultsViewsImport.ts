@@ -1,4 +1,5 @@
 import { type InjectionKey, computed, inject, nextTick, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { openSnackbar } from '@/composables/snackbar'
 import { buildViewsGroupAfterImport } from '@/migration/default-profile-importer'
@@ -13,6 +14,7 @@ import { type VehicleDefaultsEvaluationBundle, useVehicleDefaultsEvaluation } fr
  */
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export const useVehicleDefaultsViewsImport = (evaluationBundle?: VehicleDefaultsEvaluationBundle) => {
+  const { t } = useI18n()
   const widgetStore = useWidgetManagerStore()
   const bundle = evaluationBundle ?? useVehicleDefaultsEvaluation()
   const { evaluation, isCurrentViewsGroupBlank, currentViewsCount, refreshEvaluation } = bundle
@@ -91,8 +93,11 @@ export const useVehicleDefaultsViewsImport = (evaluationBundle?: VehicleDefaults
     openSnackbar({
       message:
         effectiveMode === 'replace'
-          ? `Imported default views for ${evaluation.value?.vehicleTypeName}.`
-          : `Appended ${selectedDefaultViewNames.value.length} default view(s) for ${evaluation.value?.vehicleTypeName}.`,
+          ? t('Imported default views for {vehicleTypeName}.', { vehicleTypeName: evaluation.value?.vehicleTypeName })
+          : t('Appended {count} default view(s) for {vehicleTypeName}.', {
+              count: selectedDefaultViewNames.value.length,
+              vehicleTypeName: evaluation.value?.vehicleTypeName,
+            }),
       variant: 'success',
       duration: 5000,
     })

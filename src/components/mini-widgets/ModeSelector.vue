@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, toRefs } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import FlightModeNamesConfig from '@/components/configuration/FlightModeNamesConfig.vue'
 import { datalogger, DatalogVariable } from '@/libs/sensors-logging'
@@ -55,10 +56,22 @@ datalogger.registerUsage(DatalogVariable.mode)
 const vehicleStore = useMainVehicleStore()
 const interfaceStore = useAppInterfaceStore()
 const widgetStore = useWidgetManagerStore()
+const { t } = useI18n()
 const currentMode = ref()
 
+const translateModeName = (modeName: string): string => {
+  // Try to find translation key for the mode
+  const translationKey = `flightModes.${modeName}`
+  const translated = t(translationKey)
+  // Return translation if it exists and is different from the key
+  return translated !== translationKey ? translated : vehicleStore.flightModeDisplayName(modeName)
+}
+
 const modeOptions = computed(() =>
-  vehicleStore.modesAvailable().map((mode) => ({ value: mode, name: vehicleStore.flightModeDisplayName(mode) }))
+  vehicleStore.modesAvailable().map((mode) => ({
+    value: mode,
+    name: translateModeName(mode),
+  }))
 )
 
 // Bound to the dropdown's user-selection event (not a watch on currentMode) so that automated mode changes
@@ -72,6 +85,9 @@ const onModeSelected = (newMode: unknown): void => {
 
 // eslint-disable-next-line no-undef
 let modeUpdateInterval: NodeJS.Timer | undefined = undefined
-onMounted(() => (modeUpdateInterval = setInterval(() => (currentMode.value = vehicleStore.mode), 500)))
+// Poll for mode updates since vehicleStore.mode might not be reactive in all cases
+onMounted(() => {
+  modeUpdateInterval = setInterval(() => (currentMode.value = vehicleStore.mode), 500)
+})
 onUnmounted(() => clearInterval(modeUpdateInterval))
 </script>

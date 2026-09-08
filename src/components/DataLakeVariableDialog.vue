@@ -1,8 +1,8 @@
-<template>
+﻿<template>
   <v-dialog :model-value="modelValue" max-width="560px" @update:model-value="emit('update:modelValue', $event)">
     <v-card class="rounded-lg" :style="interfaceStore.globalGlassMenuStyles">
       <v-card-title class="text-h6 font-weight-bold py-4 text-center">
-        {{ valueOnlyEditMode ? 'Edit Variable Value' : editMode ? 'Edit Variable' : 'New Variable' }}
+        {{ valueOnlyEditMode ? $t('Edit Variable Value') : editMode ? $t('Edit Variable') : $t('New Variable') }}
       </v-card-title>
       <v-card-text class="px-8">
         <div class="flex flex-col gap-4">
@@ -12,7 +12,7 @@
           <div v-if="!valueOnlyEditMode" class="flex items-center gap-2">
             <v-text-field
               v-model="variable.id"
-              label="Variable ID"
+              :label="$t('Variable ID')"
               variant="outlined"
               :disabled="editMode || !isManualIdEnabled"
               :rules="[(v) => !!v || 'ID is required']"
@@ -33,14 +33,14 @@
           <v-text-field
             v-if="!valueOnlyEditMode"
             v-model="variable.name"
-            label="Variable Name"
+            :label="$t('Variable Name')"
             variant="outlined"
             :rules="[(v) => !!v || 'Name is required']"
             density="compact"
             hide-details
           />
           <div v-if="!valueOnlyEditMode" class="flex items-center gap-2">
-            <label class="text-sm">Variable Type: </label>
+            <label class="text-sm">{{ $t('Variable Type') }}: </label>
             <v-radio-group
               v-model="variable.type"
               :rules="[(v) => !!v || 'Type is required']"
@@ -48,9 +48,9 @@
               hide-details
               inline
             >
-              <v-radio class="ml-3 mr-4" label="String" value="string" />
-              <v-radio class="ml-3 mr-4" label="Number" value="number" />
-              <v-radio class="ml-3 mr-4" label="Boolean" value="boolean" />
+              <v-radio class="ml-3 mr-4" :label="$t('String')" value="string" />
+              <v-radio class="ml-3 mr-4" :label="$t('Number')" value="number" />
+              <v-radio class="ml-3 mr-4" :label="$t('Boolean')" value="boolean" />
             </v-radio-group>
           </div>
           <v-text-field
@@ -65,9 +65,9 @@
           <v-textarea
             v-if="!valueOnlyEditMode"
             v-model="variable.description"
-            label="Description"
+            :label="$t('Description')"
             variant="outlined"
-            placeholder="Optional description of what this variable is used for"
+            :placeholder="$t('Optional description of what this transformation does')"
             rows="1"
             density="compact"
             hide-details
@@ -75,7 +75,7 @@
           <v-checkbox
             v-if="!valueOnlyEditMode"
             v-model="variable.persistent"
-            label="Persist variable between boots"
+            :label="$t('Persist between boots')"
             hide-details
             class="-mb-4 -mt-2"
           />
@@ -84,7 +84,7 @@
             v-model="variable.persistValue"
             class="-my-4"
             hide-details
-            label="Save variable value between boots"
+            :label="$t('Save value between boots')"
             :disabled="!variable.persistent"
           />
         </div>
@@ -92,8 +92,8 @@
       <v-divider class="mx-10" />
       <v-card-actions>
         <div class="flex justify-between items-center pa-2 w-full h-full">
-          <v-btn color="white" variant="text" @click="closeDialog">Cancel</v-btn>
-          <v-btn color="white" :disabled="!isValid" @click="saveVariable">Save</v-btn>
+          <v-btn color="white" variant="text" @click="closeDialog">{{ $t('Cancel') }}</v-btn>
+          <v-btn color="white" :disabled="!isValid" @click="saveVariable">{{ $t('Save') }}</v-btn>
         </div>
       </v-card-actions>
     </v-card>

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <transition name="slide-in-left" @after-enter="attachScrollListener">
     <div
       v-if="interfaceStore.isMainMenuVisible"
@@ -22,48 +22,48 @@
             >
               <GlassButton
                 v-if="baseRouteName === 'widgets-view'"
-                :label="simplifiedMainMenu ? '' : 'Edit Interface'"
+                :label="simplifiedMainMenu ? '' : $t('Edit Interface')"
                 :selected="widgetStore.editingMode"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-pencil' : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? 'Edit Mode' : undefined"
+                :tooltip="simplifiedMainMenu ? $t('Edit Mode') : undefined"
                 :width="buttonSize"
                 @click="toggleEditMode"
                 ><img v-if="!simplifiedMainMenu" :src="EditModeIcon" alt="Edit Mode Icon" />
               </GlassButton>
               <GlassButton
                 v-if="baseRouteName !== 'widgets-view'"
-                :label="simplifiedMainMenu ? '' : 'Flight'"
+                :label="simplifiedMainMenu ? '' : $t('Flight')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-send' : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? 'Flight' : undefined"
+                :tooltip="simplifiedMainMenu ? $t('Flight') : undefined"
                 :width="buttonSize"
                 @click="goToFlightView"
                 ><img v-if="!simplifiedMainMenu" :src="FlightIcon" alt="Flight Icon" />
               </GlassButton>
               <GlassButton
                 v-if="baseRouteName !== 'Mission planning'"
-                :label="simplifiedMainMenu ? '' : 'Mission Planning'"
+                :label="simplifiedMainMenu ? '' : $t('Mission Planning')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-map-marker-radius-outline' : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? 'Mission Planning' : undefined"
+                :tooltip="simplifiedMainMenu ? $t('Mission Planning') : undefined"
                 :width="buttonSize"
                 @click="goToMissionPlanning"
                 ><img v-if="!simplifiedMainMenu" :src="MissionPlanningIcon" alt="MissionPlanning Icon" />
               </GlassButton>
               <GlassButton
-                :label="simplifiedMainMenu ? '' : 'Settings'"
+                :label="simplifiedMainMenu ? '' : $t('Settings')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-cog' : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? 'Configuration' : undefined"
+                :tooltip="simplifiedMainMenu ? $t('Configuration') : undefined"
                 :width="buttonSize"
                 :selected="showSubMenu"
                 class="mb-1"
@@ -77,12 +77,12 @@
                 ><img v-if="!simplifiedMainMenu" :src="SettingsIcon" alt="Settings Icon" />
               </GlassButton>
               <GlassButton
-                :label="simplifiedMainMenu ? '' : 'Tools'"
+                :label="simplifiedMainMenu ? '' : $t('Tools')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-tools' : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? 'Tools' : undefined"
+                :tooltip="simplifiedMainMenu ? $t('Tools') : undefined"
                 :width="buttonSize"
                 :selected="showSubMenu"
                 class="mb-1"
@@ -90,12 +90,14 @@
                 ><img v-if="!simplifiedMainMenu" :src="ToolsIcon" alt="Tools Icon" />
               </GlassButton>
               <GlassButton
-                :label="simplifiedMainMenu ? '' : isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'"
+                :label="simplifiedMainMenu ? '' : isFullscreen ? $t('Exit Fullscreen') : $t('Enter Fullscreen')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? fullScreenToggleIcon : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? (isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen') : undefined"
+                :tooltip="
+                  simplifiedMainMenu ? (isFullscreen ? $t('Exit Fullscreen') : $t('Enter Fullscreen')) : undefined
+                "
                 :button-class="simplifiedMainMenu ? '-mb-2' : ''"
                 :width="buttonSize"
                 :selected="false"
@@ -107,12 +109,12 @@
                 />
               </GlassButton>
               <GlassButton
-                :label="simplifiedMainMenu ? '' : 'About'"
+                :label="simplifiedMainMenu ? '' : $t('About')"
                 :label-class="[menuLabelSize, '-mb-0.5 mt-6']"
                 :icon="simplifiedMainMenu ? 'mdi-information-outline' : undefined"
                 :icon-size="simplifiedMainMenu ? 25 : undefined"
                 variant="uncontained"
-                :tooltip="simplifiedMainMenu ? 'About' : undefined"
+                :tooltip="simplifiedMainMenu ? $t('About') : undefined"
                 :button-class="!simplifiedMainMenu ? '-mt-[5px]' : undefined"
                 :width="buttonSize"
                 :selected="showSubMenu"
@@ -130,7 +132,7 @@
             <GlassButton
               v-for="menuitem in currentSubMenu"
               :key="menuitem.title"
-              :label="simplifiedMainMenu ? undefined : menuitem.title"
+              :label="simplifiedMainMenu ? undefined : $t(menuitem.title)"
               :label-class="menuLabelSize"
               :tooltip="simplifiedMainMenu ? menuitem.title : undefined"
               :button-class="interfaceStore.isOnSmallScreen ? '-ml-[2px]' : ''"
@@ -215,7 +217,18 @@ const router = useRouter()
 const interfaceStore = useAppInterfaceStore()
 const widgetStore = useWidgetManagerStore()
 const { width: windowWidth, height: windowHeight } = useWindowSize()
-const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
+
+const isElectron = !!window.electronAPI
+const browserApi = isElectron ? null : useFullscreen()
+const isFullscreen = browserApi ? browserApi.isFullscreen : ref(false)
+
+const toggleFullscreen = (): void => {
+  if (window.electronAPI?.toggleFullscreen) {
+    window.electronAPI.toggleFullscreen()
+  } else {
+    browserApi?.toggle()
+  }
+}
 
 const emit = defineEmits<{
   (event: 'closeMainMenu'): void
@@ -470,6 +483,14 @@ onBeforeUnmount(() => {
 })
 
 onMounted(() => {
+  if (window.electronAPI) {
+    window.electronAPI.onFullscreenChanged?.((fs: boolean) => {
+      isFullscreen.value = fs
+    })
+    window.electronAPI.isFullscreen?.().then((fs: boolean) => {
+      isFullscreen.value = fs
+    })
+  }
   if (scrollContainerRef.value) {
     scrollContainerRef.value.addEventListener('scroll', handleScroll)
     handleScroll()

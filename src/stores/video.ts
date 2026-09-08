@@ -32,6 +32,7 @@ import { isElectron, isEqual, sanitizeFilenameComponent, sleep } from '@/libs/ut
 import { tempVideoStorage, videoStorage } from '@/libs/videoStorage'
 import type { Stream } from '@/libs/webrtc/signalling_protocol'
 import { readableVideoCodecName } from '@/libs/webrtc/video-codec-support'
+import i18n from '@/plugins/i18n'
 import { useMainVehicleStore } from '@/stores/mainVehicle'
 import { useMissionStore } from '@/stores/mission'
 import { Alert, AlertLevel } from '@/types/alert'
@@ -481,7 +482,10 @@ export const useVideoStore = defineStore('video', () => {
       const oldStreamData = activeStreams.value[streamName]
       if (oldStreamData && oldStreamData.webRtcManager) {
         if (isRecording(streamName)) {
-          showDialog({ message: `Stream '${streamName}' has changed. Stopping recording...`, variant: 'error' })
+          showDialog({
+            message: i18n.global.t("Stream '{{streamName}}' has changed. Stopping recording...", { streamName }),
+            variant: 'error',
+          })
           stopRecording(streamName)
         }
 
@@ -524,9 +528,10 @@ export const useVideoStore = defineStore('video', () => {
       const rtspUrl = getRtspUrl(streamName)
       if (!rtspUrl) {
         if (rtspActivationBackoff.registerFailure(streamName)) {
-          const msg =
-            `Video stream '${displayName}' has no address configured.` +
-            ' Delete it and add it again in the video configuration page.'
+          const msg = i18n.global.t(
+            "Video stream '{{displayName}}' has no address configured. Delete it and add it again in the video configuration page.",
+            { displayName }
+          )
           showDialog({ message: msg, variant: 'error' })
         }
         return
@@ -900,16 +905,19 @@ export const useVideoStore = defineStore('video', () => {
     const streamData = getStreamData(streamName)
 
     if (namesAvailableStreams.value.isEmpty()) {
-      showDialog({ message: 'No streams available.', variant: 'error' })
+      showDialog({ message: i18n.global.t('No streams available.'), variant: 'error' })
       return
     }
 
     if (streamData?.mediaStream === undefined) {
-      showDialog({ message: 'Media stream not defined.', variant: 'error' })
+      showDialog({ message: i18n.global.t('Media stream not defined.'), variant: 'error' })
       return
     }
     if (!streamData.mediaStream.active) {
-      showDialog({ message: 'Media stream not yet active. Wait a second and try again.', variant: 'error' })
+      showDialog({
+        message: i18n.global.t('Media stream not yet active. Wait a second and try again.'),
+        variant: 'error',
+      })
       return
     }
 
@@ -986,7 +994,10 @@ export const useVideoStore = defineStore('video', () => {
       recordingMonitors[streamName] = setInterval(async () => {
         // Check if the stream is still recording before proceeding with checks
         if (!activeStreams.value[streamName] || !activeStreams.value[streamName]!.mediaRecorder) {
-          const msg = `Recording for stream '${streamName}' has stopped. Stopping health monitor for this stream.`
+          const msg = i18n.global.t(
+            "Recording for stream '{{streamName}}' has stopped. Stopping health monitor for this stream.",
+            { streamName }
+          )
           showDialog({ message: msg, variant: 'warning' })
           clearInterval(recordingMonitors[streamName])
           delete recordingMonitors[streamName]
@@ -995,7 +1006,10 @@ export const useVideoStore = defineStore('video', () => {
         const fileStats = await window.electronAPI?.getFileStats(fileName, ['videos'])
         if (!fileStats || !fileStats.exists) {
           showRecordingHealthDialog(
-            `Cockpit cannot find the file for the recording of stream '${streamLabel}', which means the recording may be lost. We recommend stopping it and starting a new one.`,
+            i18n.global.t(
+              "Cockpit cannot find the file for the recording of stream '{{streamLabel}}', which means the recording may be lost. We recommend stopping it and starting a new one.",
+              { streamLabel }
+            ),
             true
           )
           return
@@ -1003,7 +1017,10 @@ export const useVideoStore = defineStore('video', () => {
         const lastKnownFileSize = unprocessedVideos.value[recordingHash].lastKnownFileSize
         if (fileStats.size! <= lastKnownFileSize!) {
           showRecordingHealthDialog(
-            `The video output file for stream '${streamLabel}' is not growing. This can indicate a problem with the recording.`
+            i18n.global.t(
+              "The video output file for stream '{{streamLabel}}' is not growing. This can indicate a problem with the recording.",
+              { streamLabel }
+            )
           )
           return
         }
@@ -1015,7 +1032,10 @@ export const useVideoStore = defineStore('video', () => {
       recordingMonitors[streamName] = setInterval(async () => {
         // Check if the stream is still recording before proceeding with checks
         if (!activeStreams.value[streamName] || !activeStreams.value[streamName]!.mediaRecorder) {
-          const msg = `Recording for stream '${streamName}' has stopped. Stopping health monitor for this stream.`
+          const msg = i18n.global.t(
+            "Recording for stream '{{streamName}}' has stopped. Stopping health monitor for this stream.",
+            { streamName }
+          )
           showDialog({ message: msg, variant: 'warning' })
           clearInterval(recordingMonitors[streamName])
           delete recordingMonitors[streamName]
@@ -1026,7 +1046,10 @@ export const useVideoStore = defineStore('video', () => {
         const lastKnownNumberOfChunks = unprocessedVideos.value[recordingHash].lastKnownNumberOfChunks
         if (numberOfChunks <= lastKnownNumberOfChunks!) {
           showRecordingHealthDialog(
-            `The number of video chunks for stream '${streamLabel}' is not growing. This can indicate a problem with the recording.`
+            i18n.global.t(
+              "The number of video chunks for stream '{{streamLabel}}' is not growing. This can indicate a problem with the recording.",
+              { streamLabel }
+            )
           )
           return
         }
@@ -1071,7 +1094,7 @@ export const useVideoStore = defineStore('video', () => {
       console.error(chunkLossWarningMsg)
 
       openSnackbar({
-        message: 'Oops, looks like a video chunk could not be saved. Retrying...',
+        message: i18n.global.t('Oops, looks like a video chunk could not be saved. Retrying...'),
         duration: 2000,
         variant: 'info',
         closeButton: false,
@@ -1132,10 +1155,16 @@ export const useVideoStore = defineStore('video', () => {
                 console.warn(`Failed to add chunk ${chunksCount} to live video processor but stream ${streamName} was already not recording. This usually happens when stopping the recording, so it's expected and should not be a problem.`)
                 return
               }
-              const msg = `Failed to add chunk ${chunksCount} to live processor: ${error.message}`
+              const msg = i18n.global.t('Failed to add chunk {{chunksCount}} to live processor: {{error}}', {
+                chunksCount,
+                error: error.message,
+              })
               openSnackbar({ message: msg, variant: 'error' })
             } else if (error instanceof LiveVideoProcessorInitializationError) {
-              const msg = `Failed to initialize live processor for stream ${streamName}: ${error.message}`
+              const msg = i18n.global.t('Failed to initialize live processor for stream {{streamName}}: {{error}}', {
+                streamName,
+                error: error.message,
+              })
               showDialog({ message: msg, variant: 'error' })
               alertStore.pushAlert(new Alert(AlertLevel.Error, msg))
               if (recorderIsStillAttached()) stopRecording(streamName)
@@ -1144,7 +1173,7 @@ export const useVideoStore = defineStore('video', () => {
         }
       } catch {
         if (chunksCount === 0) {
-          const msg = 'Failed to initiate recording. First chunk was lost. Try again.'
+          const msg = i18n.global.t('Failed to initiate recording. First chunk was lost. Try again.')
           showDialog({ message: msg, variant: 'error' })
           alertStore.pushAlert(new Alert(AlertLevel.Error, msg))
           if (recorderIsStillAttached()) stopRecording(streamName)
@@ -1192,7 +1221,7 @@ export const useVideoStore = defineStore('video', () => {
         try {
           await processor.stopProcessing()
           openSnackbar({
-            message: 'Video processing completed.',
+            message: i18n.global.t('Video processing completed.'),
             duration: 2000,
             variant: 'success',
             closeButton: false,
@@ -1209,7 +1238,7 @@ export const useVideoStore = defineStore('video', () => {
       try {
         await generateTelemetryOverlay(recordingHash)
       } catch (telemetryError) {
-        openSnackbar({ message: `Failed to generate telemetry overlay: ${telemetryError}`, variant: 'error' })
+        openSnackbar({ message: i18n.global.t('Failed to generate telemetry overlay.'), variant: 'error' })
       }
 
       if (activeStreams.value[streamName]) {
@@ -1286,13 +1315,15 @@ export const useVideoStore = defineStore('video', () => {
   const issueSelectedIpNotAvailableWarning = (): void => {
     showDialog({
       maxWidth: 600,
-      title: 'All available video stream IPs are being blocked',
+      title: i18n.global.t('All available video stream IPs are being blocked'),
       message: [
-        `Cockpit detected that none of the IPs that are streaming video from your server are in the allowed list. This
-        will lead to no video being streamed.`,
-        'This can happen if you changed your network or the IP of your vehicle.',
-        `To solve this problem, please open the video settings and clear the selected IPs. Then, select an available
-        IP from the list.`,
+        i18n.global.t(
+          'Cockpit detected that none of the IPs that are streaming video from your server are in the allowed list. This will lead to no video being streamed.'
+        ),
+        i18n.global.t('This can happen if you changed your network or the IP of your vehicle.'),
+        i18n.global.t(
+          'To solve this problem, please open the video settings and clear the selected IPs. Then, select an available IP from the list.'
+        ),
       ],
       variant: 'warning',
       actions: videoStreamingWarningActions,
@@ -1302,12 +1333,15 @@ export const useVideoStore = defineStore('video', () => {
   const issueNoIpSelectedWarning = (): void => {
     showDialog({
       maxWidth: 600,
-      title: 'Video being routed from multiple IPs',
+      title: i18n.global.t('Video being routed from multiple IPs'),
       message: [
-        `Cockpit detected that the video streams are being routed from multiple IPs. This often leads to video
-        stuttering, especially if one of the IPs is from a non-wired connection.`,
-        `To prevent issues and achieve an optimal streaming experience, please open the video settings and select the
-        IP address that should be used for the video streaming.`,
+        i18n.global.t(
+          'Cockpit detected that the video streams are being routed from multiple IPs. This often leads to ' +
+            'video stuttering, especially if one of the IPs is from a non-wired connection.'
+        ),
+        i18n.global.t(
+          'To prevent issues and achieve an optimal streaming experience, please open the video settings and select the IP address that should be used for the video streaming.'
+        ),
       ],
       variant: 'warning',
       actions: videoStreamingWarningActions,
@@ -1356,7 +1390,7 @@ export const useVideoStore = defineStore('video', () => {
           allowedIceIps.value = newAllowedIps
           if (!allowedIceIps.value.isEmpty()) {
             showDialog({
-              message: 'Preferred video stream routes fetched from BlueOS.',
+              message: i18n.global.t('Preferred video stream routes fetched from BlueOS.'),
               variant: 'success',
               timer: 5000,
             })
@@ -1466,9 +1500,18 @@ export const useVideoStore = defineStore('video', () => {
         teardownStreamResources(externalId, `External stream '${externalId}' was ignored by user`)
       }
 
-      openSnackbar({ variant: 'success', message: `Stream '${stream.name}' deleted and added to ignored list.` })
+      const successMessage =
+        stream.protocol === 'rtsp'
+          ? i18n.global.t("RTSP stream '{{streamName}}' deleted.", { streamName: stream.name })
+          : i18n.global.t("Stream '{{streamName}}' has been deleted and added to the ignored list.", {
+              streamName: stream.name,
+            })
+      openSnackbar({ variant: 'success', message: successMessage })
     } else {
-      openSnackbar({ variant: 'warning', message: `Stream with external ID '${externalId}' not found.` })
+      openSnackbar({
+        variant: 'warning',
+        message: i18n.global.t("Stream with external id '{{externalId}}' not found.", { externalId }),
+      })
     }
   }
 
@@ -1491,12 +1534,21 @@ export const useVideoStore = defineStore('video', () => {
       } else if (namesAvailableStreams.value.includes(externalId)) {
         initializeStreamsCorrespondency()
       } else {
-        openSnackbar({ variant: 'warning', message: `Stream '${externalId}' not available anymore.` })
+        openSnackbar({
+          variant: 'warning',
+          message: i18n.global.t("Stream '{{externalId}}' is no longer available.", { externalId }),
+        })
       }
 
-      openSnackbar({ variant: 'success', message: `Stream '${externalId}' restored from ignored list.` })
+      openSnackbar({
+        variant: 'success',
+        message: i18n.global.t("Stream '{{externalId}}' has been restored from the ignored list.", { externalId }),
+      })
     } else {
-      openSnackbar({ variant: 'warning', message: `Stream with external ID '${externalId}' not on ignored list.` })
+      openSnackbar({
+        variant: 'warning',
+        message: i18n.global.t("Stream with external id '{{externalId}}' is not in the ignored list.", { externalId }),
+      })
     }
   }
 

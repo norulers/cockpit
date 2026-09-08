@@ -16,7 +16,7 @@ export const useDevelopmentStore = defineStore('development', () => {
   const showConsole = ref(false)
   const enableSystemLogging = useBlueOsStorage(systemLoggingEnablingKey, true)
   const enableBlueOsSettingsSync = useStorage(blueOsSettingsSyncEnablingKey, true)
-  const showSplashScreenOnStartup = useStorage(showSplashScreenOnStartupKey, true)
+  const showSplashScreenOnStartup = useStorage(showSplashScreenOnStartupKey, false)
 
   const shareHardwareDetails = ref<boolean>(
     settingsManager.getKeyValue<boolean>(shareHardwareDetailsKey) ?? defaultShareHardwareDetails

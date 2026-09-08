@@ -3,6 +3,7 @@ import { useThrottleFn } from '@vueuse/core'
 import { differenceInSeconds } from 'date-fns'
 import { defineStore } from 'pinia'
 import { computed, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { defaultGlobalAddress, defaultVehicleBatteryPack } from '@/assets/defaults'
 import { useBlueOsStorage } from '@/composables/settingsSyncer'
@@ -81,6 +82,7 @@ const defaultRtcConfiguration = {
 const { openSnackbar } = useSnackbar()
 
 export const useMainVehicleStore = defineStore('main-vehicle', () => {
+  const { t } = useI18n()
   const controllerStore = useControllerStore()
   const missionStore = useMissionStore()
   const ws_protocol = location?.protocol === 'https:' ? 'wss' : 'ws'
@@ -295,7 +297,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
       if (!getDataLakeVariableInfo(vehicleAddressVariableId)) {
         createDataLakeVariable({
           id: vehicleAddressVariableId,
-          name: 'Vehicle Address',
+          name: t('Vehicle Address'),
           type: 'string',
           description: 'The address of the vehicle, without protocol.',
         })
@@ -305,7 +307,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
       if (!getDataLakeVariableInfo(vehicleMavlink2RestHttpEndpointVariableId)) {
         createDataLakeVariable({
           id: vehicleMavlink2RestHttpEndpointVariableId,
-          name: 'MAVLink2REST HTTP Endpoint',
+          name: t('MAVLink2REST HTTP Endpoint'),
           type: 'string',
           description: 'The HTTP endpoint of the vehicle MAVLink2REST service.',
         })
@@ -346,7 +348,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function arm(): Promise<void> {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to arm.')
+      throw new Error(t('No vehicle available to arm'))
     }
 
     await mainVehicle.value.arm()
@@ -359,7 +361,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function disarm(): Promise<void> {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to disarm.')
+      throw new Error(t('No vehicle available to disarm'))
     }
 
     await mainVehicle.value.disarm()
@@ -394,7 +396,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function land(): Promise<void> {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to land.')
+      throw new Error(t('No vehicle available to land'))
     }
 
     await mainVehicle.value.land()
@@ -426,7 +428,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
     skipConfirmation = false
   ): Promise<void> {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to execute go to command.')
+      throw new Error(t('No vehicle available to execute go to command'))
     }
 
     if (mainVehicle.value.firmware() !== Vehicle.Firmware.ArduPilot) {
@@ -536,7 +538,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function fetchHomeWaypoint(): Promise<Waypoint> {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to fetch home waypoint.')
+      throw new Error(t('No vehicle available to fetch home waypoint'))
     }
     if (mainVehicle.value.firmware() !== Vehicle.Firmware.ArduPilot) {
       throw new Error('Home waypoint retrieval is only supported for ArduPilot vehicles.')
@@ -554,7 +556,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function setHomeWaypoint(coordinate: [number, number], height: number): Promise<void> {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to set home waypoint.')
+      throw new Error(t('No vehicle available to set home waypoint'))
     }
     await mainVehicle.value.setHomeWaypoint(coordinate, height)
     missionStore.homeMarkerPosition = coordinate
@@ -565,14 +567,14 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function clearMissions(): Promise<void> {
     mainVehicle.value?.clearMissions()
-    openSnackbar({ message: 'Mission deleted from vehicle', variant: 'info' })
+    openSnackbar({ message: t('Mission deleted from vehicle'), variant: 'info' })
   }
 
   /**
    * Start mission that is on the vehicle
    */
   async function startMission(): Promise<void> {
-    if (!mainVehicle.value) throw new Error('No vehicle available to start mission.')
+    if (!mainVehicle.value) throw new Error(t('No vehicle available to start mission'))
 
     await mainVehicle.value.startMission()
   }
@@ -777,11 +779,15 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
 
     // Register BlueOS variables in the data lake
     const blueOsVariables = {
-      cpuTemp: { id: 'blueos/cpu/tempC', name: 'CPU Temperature', type: 'number' },
-      cpuUsageAverage: { id: 'blueos/cpu/usageAverage', name: 'BlueOS CPU Usage (average)', type: 'number' },
+      cpuTemp: { id: 'blueos/cpu/tempC', name: t('CPU Temperature'), type: 'number' },
+      cpuUsageAverage: {
+        id: 'blueos/cpu/usageAverage',
+        name: t('BlueOS CPU Usage (average)'),
+        type: 'number',
+      },
       cpuFrequencyAverage: {
         id: 'blueos/cpu/frequencyAverage',
-        name: 'BlueOS CPU Frequency (average)',
+        name: t('BlueOS CPU Frequency (average)'),
         type: 'number',
       },
     }
@@ -846,14 +852,14 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
       Object.assign(blueOsVariables, {
         [`${cpu.name}_usage`]: {
           id: cpuUsageVariableId(cpu.name),
-          name: `BlueOS CPU '${cpu.name}' usage`,
+          name: t("BlueOS CPU '{name}' usage", { name: cpu.name }),
           type: 'number',
         },
       })
       Object.assign(blueOsVariables, {
         [`${cpu.name}_frequency`]: {
           id: cpuFrequencyVariableId(cpu.name),
-          name: `BlueOS CPU '${cpu.name}' frequency`,
+          name: t("BlueOS CPU '{name}' frequency", { name: cpu.name }),
           type: 'number',
         },
       })
@@ -865,22 +871,22 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
       Object.assign(blueOsVariables, {
         [`${networkInterface.name}_totalReceivedMB`]: {
           id: networkTotalReceivedMBVariableId(networkInterface.name),
-          name: `BlueOS network '${networkInterface.name}' total received (MB)`,
+          name: t("BlueOS network '{name}' total received (MB)", { name: networkInterface.name }),
           type: 'number',
         },
         [`${networkInterface.name}_totalTransmittedMB`]: {
           id: networkTotalTransmittedMBVariableId(networkInterface.name),
-          name: `BlueOS network '${networkInterface.name}' total transmitted (MB)`,
+          name: t("BlueOS network '{name}' total transmitted (MB)", { name: networkInterface.name }),
           type: 'number',
         },
         [`${networkInterface.name}_uploadSpeedMbps`]: {
           id: networkUploadSpeedMbpsVariableId(networkInterface.name),
-          name: `BlueOS network '${networkInterface.name}' upload speed (Mbps)`,
+          name: t("BlueOS network '{name}' upload speed (Mbps)", { name: networkInterface.name }),
           type: 'number',
         },
         [`${networkInterface.name}_downloadSpeedMbps`]: {
           id: networkDownloadSpeedMbpsVariableId(networkInterface.name),
-          name: `BlueOS network '${networkInterface.name}' download speed (Mbps)`,
+          name: t("BlueOS network '{name}' download speed (Mbps)", { name: networkInterface.name }),
           type: 'number',
         },
       })
@@ -984,14 +990,14 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
 
   const listenToIncomingMessages = (messageType: string, callback: (pack: Package) => void): void => {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to listen for incoming messages.')
+      throw new Error(t('No vehicle available to listen for incoming messages'))
     }
     mainVehicle.value?.onIncomingMAVLinkMessage.add(messageType, callback)
   }
 
   const listenToOutgoingMessages = (messageType: string, callback: (pack: Package) => void): void => {
     if (!mainVehicle.value) {
-      throw new Error('No vehicle available to listen for outgoing messages.')
+      throw new Error(t('No vehicle available to listen for outgoing messages'))
     }
     mainVehicle.value?.onOutgoingMAVLinkMessage.add(messageType, callback)
   }
@@ -1024,17 +1030,32 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
   const mavlinkManualControlManager = new MavlinkManualControlManager()
   controllerStore.registerControllerUpdateCallback(mavlinkManualControlManager.updateControllerData)
 
-  // Loop to send MAVLink Manual Control messages
+  // Loop to send MAVLink RC_CHANNELS_OVERRIDE messages (like MissionPlanner).
+  // When direct RC control (Electron + UDP) is active, JoystickCommIndicator handles
+  // RC_CHANNELS_OVERRIDE via a dedicated UDP socket, so we skip this path to avoid conflicts.
+  let wasForwarding = false
   setInterval(() => {
     // Set the manager vehicle instance if yet undefined
     if (mainVehicle.value && mavlinkManualControlManager.vehicle === undefined) {
       mavlinkManualControlManager.setVehicle(mainVehicle.value as ArduPilot)
     }
 
-    // Send MAVLink Manual Control message
-    if (controllerStore.enableForwarding) {
-      mavlinkManualControlManager.sendManualControl()
+    if (!controllerStore.enableForwarding) {
+      // On disable, send clear override bursts (like MissionPlanner's clearRCOverride)
+      if (wasForwarding) {
+        mavlinkManualControlManager.sendClearOverride()
+        wasForwarding = false
+      }
+      return
     }
+    wasForwarding = true
+
+    const directRcEnabled = localStorage.getItem('cockpit-rc-direct-control-enabled') === 'true'
+    if (directRcEnabled) return
+
+    // Only send RC_CHANNELS_OVERRIDE for axis data (MissionPlanner-style).
+    // MANUAL_CONTROL is not sent here to avoid conflicting with RC_CHANNELS_OVERRIDE.
+    mavlinkManualControlManager.sendRcOverride()
   }, 40)
   setInterval(() => sendGcsHeartbeat(), 1000)
   setInterval(() => mainVehicle.value?.sendSystemTime(), 10000)
@@ -1055,7 +1076,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function updateMessageInterval(messageType: string, options: MessageIntervalOptions): Promise<void> {
     if (mainVehicle.value === undefined || !isVehicleOnline.value) {
-      throw new Error('No vehicle available to update message interval.')
+      throw new Error(t('No vehicle available to update message interval'))
     }
 
     // Store the interval options in storage
@@ -1070,7 +1091,7 @@ export const useMainVehicleStore = defineStore('main-vehicle', () => {
    */
   async function resetMessageIntervalsToCockpitDefault(): Promise<void> {
     if (mainVehicle.value === undefined || !isVehicleOnline.value) {
-      throw new Error('No vehicle available to reset message intervals.')
+      throw new Error(t('No vehicle available to reset message intervals'))
     }
 
     // Reset storage to defaults

@@ -2,7 +2,7 @@
   <div class="relative flex items-center -mt-[2px]">
     <v-menu :close-on-content-click="false" location="top" offset="8">
       <template #activator="{ props: speedProps }">
-        <v-tooltip location="top" open-delay="800" :text="`Cruise speed (${liveCruiseSpeed.toFixed(1)} m/s)`">
+        <v-tooltip location="top" open-delay="800" :text="$t('Cruise speed') + ` (${liveCruiseSpeed.toFixed(1)} m/s)`">
           <template #activator="{ props: speedTooltipProps }">
             <v-btn
               v-bind="{ ...speedProps, ...speedTooltipProps }"
@@ -17,7 +17,7 @@
       </template>
       <div class="flex flex-col p-3 rounded-lg w-[210px] text-white" :style="interfaceStore.globalGlassMenuStyles">
         <div class="flex justify-between items-center mb-1 text-xs">
-          <span>Cruise speed</span>
+          <span>{{ $t('Cruise speed') }}</span>
           <span class="font-bold">{{ liveCruiseSpeed.toFixed(1) }} m/s</span>
         </div>
         <v-slider

@@ -117,6 +117,8 @@
 <script setup lang="ts">
 import { useStorage } from '@vueuse/core'
 import { type Component, computed, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useLocale } from 'vuetify'
 
 import ArchitectureWarning from '@/components/ArchitectureWarning.vue'
 import BaseStationConfigPanel from '@/components/BaseStationConfigPanel.vue'
@@ -233,6 +235,30 @@ useSnapshotStore()
 // VehicleDefaultsAutoImportModal when the user still needs to make a decision.
 useVehicleDefaultsAutoImport()
 
+// Sync Vuetify locale with vue-i18n
+const { locale: i18nLocale, t } = useI18n()
+const { current: vuetifyLocale } = useLocale()
+
+// Map vue-i18n locales to Vuetify locales
+const localeMap: Record<string, string> = {
+  en: 'en',
+  zh: 'zhHans',
+}
+
+// Watch for i18n locale changes and update Vuetify
+watch(
+  i18nLocale,
+  (newLocale) => {
+    vuetifyLocale.value = localeMap[newLocale] || 'en'
+
+    // Update Electron menu language if running in Electron
+    if (window.electronAPI?.updateMenuLanguage) {
+      window.electronAPI.updateMenuLanguage(newLocale)
+    }
+  },
+  { immediate: true }
+)
+
 // Upload custom map tile archives imported while offline to the vehicle once it comes online.
 useCustomTileProviderVehicleSync()
 
@@ -319,7 +345,7 @@ watch(
       showReconnectedFeedback.value = false
       if (!vehicleStore.isVehicleConnectionLost) return
       openSnackbar({
-        message: 'Vehicle connection lost: reestablishing',
+        message: t('Vehicle connection lost'),
         variant: 'error',
         duration: 3000,
         closeButton: false,
@@ -327,7 +353,7 @@ watch(
       return
     }
 
-    openSnackbar({ message: 'Vehicle connected', variant: 'success', duration: 3000, closeButton: false })
+    openSnackbar({ message: t('Vehicle is connected'), variant: 'success', duration: 3000, closeButton: false })
     showReconnectedFeedback.value = true
     reconnectedFeedbackTimeout = setTimeout(() => (showReconnectedFeedback.value = false), 4000)
   }

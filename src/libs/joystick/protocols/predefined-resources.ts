@@ -7,8 +7,8 @@ import {
 } from '@/libs/actions/mavlink-message-actions'
 import { MavCmd, MAVLinkType } from '@/libs/connection/m2r/messages/mavlink2rest-enum'
 import { getUnindentedString } from '@/libs/utils'
-import { MessageFieldType } from '@/types/cockpit-actions'
-import { customActionTypes } from '@/types/cockpit-actions'
+import i18n from '@/plugins/i18n'
+import { customActionTypes, MessageFieldType } from '@/types/cockpit-actions'
 
 import { DataLakeVariableAction } from './data-lake'
 
@@ -43,18 +43,30 @@ export const joystickInputAxes: Record<(typeof joystickAxisConfig)[number]['key'
 const setupMavlinkCameraResources = (): void => {
   const commonVariableConfig = { type: 'number' as DataLakeVariableType, allowUserToChangeValue: true }
   // Initialize camera zoom variables
-  createDataLakeVariable({ id: 'camera-zoom-decrease', name: 'Camera Zoom Decrease', ...commonVariableConfig }, 0)
-  createDataLakeVariable({ id: 'camera-zoom-increase', name: 'Camera Zoom Increase', ...commonVariableConfig }, 0)
+  createDataLakeVariable(
+    { id: 'camera-zoom-decrease', name: i18n.global.t('Camera Zoom Decrease'), ...commonVariableConfig },
+    0
+  )
+  createDataLakeVariable(
+    { id: 'camera-zoom-increase', name: i18n.global.t('Camera Zoom Increase'), ...commonVariableConfig },
+    0
+  )
 
   // Initialize camera focus variables
-  createDataLakeVariable({ id: 'camera-focus-decrease', name: 'Camera Focus Decrease', ...commonVariableConfig }, 0)
-  createDataLakeVariable({ id: 'camera-focus-increase', name: 'Camera Focus Increase', ...commonVariableConfig }, 0)
+  createDataLakeVariable(
+    { id: 'camera-focus-decrease', name: i18n.global.t('Camera Focus Decrease'), ...commonVariableConfig },
+    0
+  )
+  createDataLakeVariable(
+    { id: 'camera-focus-increase', name: i18n.global.t('Camera Focus Increase'), ...commonVariableConfig },
+    0
+  )
 
   // Initialize camera zoom transforming function
   try {
     ensureCockpitTransformingFunction({
       id: 'camera-zoom',
-      name: 'Camera Zoom',
+      name: i18n.global.t('Camera Zoom'),
       type: 'number',
       expression: getUnindentedString(`
         const zoom = {{camera-zoom-increase}} - {{camera-zoom-decrease}}
@@ -72,7 +84,7 @@ const setupMavlinkCameraResources = (): void => {
   try {
     ensureCockpitTransformingFunction({
       id: 'camera-focus',
-      name: 'Camera Focus',
+      name: i18n.global.t('Camera Focus'),
       type: 'number',
       expression: getUnindentedString(`
         const focus = {{camera-focus-increase}} - {{camera-focus-decrease}}
